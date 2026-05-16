@@ -3,6 +3,7 @@ import mammoth from 'mammoth';
 import PptxGenJS from 'pptxgenjs';
 import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './data/practiceAreas.js';
 import { SAMPLE_DOCS, VULN_REPORT } from './data/documents.js';
+import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './data/agentData.js';
 import './App.css';
 
 const totalSkills = PRACTICE_AREAS.reduce((a, p) => a + p.skills.length, 0);
@@ -422,8 +423,11 @@ export default function App() {
   const [authCode, setAuthCode] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [agentRunning, setAgentRunning] = useState(null);
+  const [agentResults, setAgentResults] = useState({});
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
+  const agentFileRef = useRef(null);
 
   useEffect(() => { setTimeout(() => setReady(true), 80); }, []);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
@@ -565,6 +569,137 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
 
   const onDrop = useCallback((e) => { e.preventDefault(); onFiles(e.dataTransfer.files); }, [onFiles]);
 
+  /* ─── AGENT RUNNER ─── */
+  const AGENT_CONFIGS = {
+    renewal: {
+      name: 'Renewal Watcher',
+      icon: '📅',
+      color: '#C9A84C',
+      desc: 'Scans your contract register for upcoming renewal and cancellation deadlines. Flags contracts requiring action in the next 30, 60, and 90 days.',
+      sampleData: SAMPLE_CONTRACT_REGISTER,
+      sampleLabel: '20 contracts with various deadlines',
+      acceptTypes: '.csv,.xlsx,.txt',
+      prompt: (data) => `You are the Renewal Watcher managed agent. Analyze this contract register and produce a structured alert report.
+
+Today's date is ${new Date().toISOString().split('T')[0]}.
+
+For each contract, calculate:
+- Days until expiration
+- Whether it auto-renews
+- Whether the cancel-notice window has passed or is approaching
+- Risk level based on value and timeline
+
+OUTPUT FORMAT:
+## REPORT: Contract Renewal Alert — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+
+For each contract needing attention, use:
+🔴 F-[NNN] | HIGH RISK | [Contract ID] — [Title]
+REFERENCE: Contract [ID], [Vendor], expires [date], auto-renew: [Y/N], cancel notice: [days]
+ISSUE: [What's happening — approaching deadline, missed cancel window, etc.]
+CURRENT WORDING: "[Contract value and current terms]"
+RECOMMENDED WORDING: "[Specific action to take — cancel, renegotiate, extend, etc. with timeline]"
+
+Use 🔴 for urgent (within 30 days or cancel window passed), 🟡 for approaching (30-90 days), 🟢 for monitoring (90+ days), 💡 for recommendations.
+
+## RISK SUMMARY
+Executive summary of the portfolio health, total value at risk, and critical deadlines.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Contract ID] | [Issue] | [Action required with specific date]
+
+CONTRACT REGISTER DATA:
+${data}`,
+    },
+    regmonitor: {
+      name: 'Reg Monitor',
+      icon: '📋',
+      color: '#8B6F47',
+      desc: 'Analyzes regulatory updates for impact on your organization. Produces a prioritized digest with compliance gap analysis and recommended actions.',
+      sampleData: SAMPLE_REG_UPDATES,
+      sampleLabel: '7 regulatory updates (SEC, FTC, HHS, DOJ, EU, CA, NY)',
+      acceptTypes: '.txt,.csv,.pdf',
+      prompt: (data) => `You are the Regulatory Monitor managed agent. Analyze these regulatory updates and produce an impact assessment report for a multinational technology company operating in financial services, healthcare technology, and enterprise SaaS.
+
+OUTPUT FORMAT:
+## REPORT: Regulatory Digest — Week of ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+
+For each regulatory item, assess:
+🔴 F-[NNN] | HIGH RISK | [Agency/Regulator] — [Rule Title]
+REFERENCE: [Citation, effective date, comment deadline if applicable]
+ISSUE: [What this regulation requires, who it affects, and why it matters to our business]
+CURRENT WORDING: "[Key requirement or threshold from the regulation]"
+RECOMMENDED WORDING: "[Specific compliance action — policy update, process change, filing required, etc.]"
+
+Use 🔴 for immediate action required, 🟡 for planning needed, 🟢 for monitoring, 💡 for strategic recommendations.
+
+## RISK SUMMARY
+Overall regulatory landscape assessment, most impactful changes, and resource implications.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Regulation reference] | [Gap identified] | [Compliance action with deadline]
+
+REGULATORY DATA:
+${data}`,
+    },
+    launchradar: {
+      name: 'Launch Radar',
+      icon: '🚀',
+      color: '#5B9BD5',
+      desc: 'Reviews pending product launches for legal risk. Assesses privacy, regulatory, IP, and commercial exposure before go-live.',
+      sampleData: SAMPLE_LAUNCH_ITEMS,
+      sampleLabel: '5 product launches pending legal review',
+      acceptTypes: '.txt,.csv',
+      prompt: (data) => `You are the Launch Radar managed agent. Analyze these pending product launches and produce a legal risk assessment for each. You are reviewing for a multinational technology company.
+
+Assess each launch for:
+- Privacy/data protection risks (GDPR, CCPA, BIPA, HIPAA)
+- AI/algorithmic risks (EU AI Act, FTC guidance, state laws)
+- Consumer protection risks
+- Employment law risks
+- IP risks
+- Regulatory compliance risks
+
+OUTPUT FORMAT:
+## REPORT: Launch Radar — Legal Risk Assessment
+
+For each launch item:
+🔴 F-[NNN] | HIGH RISK | [Launch ID] — [Product Name]
+REFERENCE: [Launch ID, target date, risk flags identified]
+ISSUE: [Specific legal risk with regulatory citations]
+CURRENT WORDING: "[Current product/feature description that creates risk]"
+RECOMMENDED WORDING: "[Specific mitigation — what needs to change before launch, required disclosures, consent mechanisms, etc.]"
+
+## RISK SUMMARY
+Portfolio-level launch risk assessment. Which launches can proceed, which need holds, which need modifications.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Launch ID] | [Risk area] | [Required action before launch with specific recommendation]
+
+LAUNCH DATA:
+${data}`,
+    },
+  };
+
+  const runAgent = async (agentId, customData) => {
+    const config = AGENT_CONFIGS[agentId];
+    if (!config) return;
+    setAgentRunning(agentId);
+
+    const data = customData || config.sampleData;
+    const userPrompt = config.prompt(data);
+
+    try {
+      const text = await chatAPI({
+        messages: [{ role: 'user', content: userPrompt }],
+        system: 'You are a managed legal agent. Follow the output format exactly. Every finding must use the structured F-NNN format with all 5 required lines (header, REFERENCE, ISSUE, CURRENT WORDING, RECOMMENDED WORDING). Be specific and actionable. End with: ---\nDraft for attorney review — not legal advice.',
+      });
+      setAgentResults(prev => ({ ...prev, [agentId]: { text, time: new Date(), data: customData ? 'Custom upload' : 'Sample data' } }));
+    } catch (err) {
+      setAgentResults(prev => ({ ...prev, [agentId]: { text: `⚠ Agent error: ${err.message}`, time: new Date(), data: 'Error' } }));
+    }
+    setAgentRunning(null);
+  };
+
   /* ─── FILTERED AREAS ─── */
   const filtered = search
     ? PRACTICE_AREAS.map(a => ({ ...a, skills: a.skills.filter(s =>
@@ -577,6 +712,7 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '◈' },
     { id: 'skills', label: 'Practice Areas', icon: '◆' },
+    { id: 'agents', label: 'Agents', icon: '⟐' },
     { id: 'agent', label: 'AI Agent', icon: '⬡' },
     { id: 'docs', label: 'Documents', icon: '▣' },
     { id: 'guide', label: 'User Guide', icon: '◎' },
@@ -733,6 +869,134 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         )}
 
         {/* ══════════════════ AI AGENT ══════════════════ */}
+        {/* ══════════════════ MANAGED AGENTS (LIVE) ══════════════════ */}
+        {tab === 'agents' && (
+          <div className="fade-wrapper visible">
+            <section className="hero-card" style={{ marginBottom: 24 }}>
+              <div className="hero-content">
+                <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>⟐ Managed Agents</h2>
+                <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>
+                  Live AI agents that analyze your data and produce actionable reports. Run with sample data to see them in action, or upload your own files for real analysis.
+                </p>
+              </div>
+            </section>
+
+            <div className="agent-runner-grid">
+              {Object.entries(AGENT_CONFIGS).map(([id, config]) => (
+                <div key={id} className="agent-runner-card">
+                  <div className="agent-runner-header" style={{ borderBottomColor: config.color }}>
+                    <span style={{ fontSize: 28 }}>{config.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div className="agent-runner-name">{config.name}</div>
+                      <div className="agent-runner-desc">{config.desc}</div>
+                    </div>
+                    <span className={`agent-status ${agentRunning === id ? 'agent-running' : agentResults[id] ? 'agent-done' : ''}`}>
+                      {agentRunning === id ? '⏳ Running…' : agentResults[id] ? '✓ Complete' : '○ Ready'}
+                    </span>
+                  </div>
+
+                  <div className="agent-runner-body">
+                    <div className="agent-runner-actions">
+                      <button
+                        className="btn btn-gold"
+                        disabled={agentRunning !== null}
+                        onClick={() => runAgent(id)}
+                      >
+                        {agentRunning === id ? '⏳ Analyzing…' : `▶ Run with Sample Data`}
+                      </button>
+                      <span className="agent-sample-info">📊 {config.sampleLabel}</span>
+                    </div>
+
+                    <div className="agent-upload-row">
+                      <span className="agent-or">— or upload your own —</span>
+                      <label className="btn btn-ghost btn-sm agent-upload-btn">
+                        📎 Upload File
+                        <input type="file" accept={config.acceptTypes} style={{ display: 'none' }} onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => runAgent(id, ev.target.result);
+                          reader.readAsText(file);
+                          e.target.value = '';
+                        }} />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Agent Results */}
+                  {agentResults[id] && (
+                    <div className="agent-results">
+                      <div className="agent-results-meta">
+                        <span>Completed: {agentResults[id].time?.toLocaleTimeString()}</span>
+                        <span>Source: {agentResults[id].data}</span>
+                      </div>
+
+                      {isReport(agentResults[id].text) ? (
+                        <div className="report-card" style={{ margin: 0, border: 'none' }}>
+                          <div className="report-header" style={{ borderRadius: 0 }}>
+                            <span className="report-icon">⚖</span>
+                            <span className="report-title">{(agentResults[id].text.match(/##\s*REPORT:\s*(.+)/i) || [,'Agent Report'])[1]}</span>
+                            <div className="report-header-actions">
+                              <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'pdf')}>🔍 Full Report</button>
+                              <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'word')}>📝 Word</button>
+                              <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pptx')}>📊 PPT</button>
+                              <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'csv')}>📈 Excel</button>
+                            </div>
+                          </div>
+                          <div className="report-counts">
+                            {[
+                              { type: 'high', label: 'High Risk', icon: '🔴', count: (agentResults[id].text.match(/🔴/g) || []).length },
+                              { type: 'medium', label: 'Medium Risk', icon: '🟡', count: (agentResults[id].text.match(/🟡/g) || []).length },
+                              { type: 'low', label: 'Low Risk', icon: '🟢', count: (agentResults[id].text.match(/🟢/g) || []).length },
+                              { type: 'rec', label: 'Recommendations', icon: '💡', count: (agentResults[id].text.match(/💡/g) || []).length },
+                            ].filter(c => c.count > 0).map((c, j) => (
+                              <span key={j} className={`count-badge count-${c.type}`}>{c.icon} {c.count} {c.label}</span>
+                            ))}
+                          </div>
+                          <div className="report-findings">
+                            {parseReport(agentResults[id].text).map((item, j) => (
+                              <div key={j} className={`report-item report-item-${item.type}`}>
+                                <div className="report-item-header">
+                                  <span className={`report-badge report-badge-${item.type}`}>
+                                    {item.type === 'high' ? '🔴 HIGH' : item.type === 'medium' ? '🟡 MEDIUM' : item.type === 'low' ? '🟢 LOW' : item.type === 'rec' ? '💡 REC' : '📋 INFO'}
+                                  </span>
+                                  {item.num && <span className="report-item-num">{item.num}</span>}
+                                  <span className="report-item-title">{item.title}</span>
+                                </div>
+                                {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
+                                {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
+                                {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
+                                {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
+                                {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
+                              </div>
+                            ))}
+                          </div>
+                          {extractSection(agentResults[id].text, 'RISK SUMMARY') && (
+                            <div className="report-summary"><div className="report-summary-title">📊 Risk Summary</div><div className="report-summary-text">{extractSection(agentResults[id].text, 'RISK SUMMARY')}</div></div>
+                          )}
+                          {parseKeyActions(agentResults[id].text).length > 0 && (
+                            <div className="report-ka-section"><div className="report-ka-title">🎯 Key Actions Required</div><div className="report-ka-table">
+                              <div className="ka-header-row"><span className="ka-col ka-col-num">#</span><span className="ka-col ka-col-sev">Risk</span><span className="ka-col ka-col-ref">Reference</span><span className="ka-col ka-col-issue">Issue</span><span className="ka-col ka-col-rec">Recommendation</span></div>
+                              {parseKeyActions(agentResults[id].text).map((ka, k) => (
+                                <div key={k} className={`ka-row ka-row-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'medium' : 'low'}`}>
+                                  <span className="ka-col ka-col-num">{ka.num}</span><span className="ka-col ka-col-sev"><span className={`ka-sev-badge ${ka.severity.toLowerCase().includes('high') ? 'ka-sev-high' : ka.severity.toLowerCase().includes('medium') ? 'ka-sev-med' : 'ka-sev-low'}`}>{ka.severity}</span></span>
+                                  <span className="ka-col ka-col-ref">{ka.reference}</span><span className="ka-col ka-col-issue">{ka.issue}</span><span className="ka-col ka-col-rec">{ka.recommendation}</span>
+                                </div>
+                              ))}
+                            </div></div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ padding: 20, fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{agentResults[id].text}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ══════════════════ AI AGENT (AUTH GATED) ══════════════════ */}
         {tab === 'agent' && !isUnlocked && (
           <div className="auth-gate">
