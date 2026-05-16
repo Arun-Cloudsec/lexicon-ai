@@ -601,6 +601,7 @@ export default function App() {
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
+  const [lastDocContent, setLastDocContent] = useState('');
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
   const agentFileRef = useRef(null);
@@ -681,6 +682,8 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
       setMsgs(prev => [...prev, { role: 'assistant', text: `⚠ ${err.message}`, time: new Date() }]);
     }
     setLoading(false);
+    // Persist the document content for Redline export (files get cleared but we keep the content)
+    if (files.length > 0 && files[0].content) setLastDocContent(files[0].content);
     setFiles([]);
   };
 
@@ -774,6 +777,9 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
   const runComparison = async () => {
     if (!vendorDoc?.content || !orgDoc?.content) return;
     if (vendorDoc.reading || orgDoc.reading) return;
+
+    // Persist vendor doc for Redline export
+    setLastDocContent(vendorDoc.content);
 
     const userMsg = { role: 'user', text: `📋 Compare & Comply: "${vendorDoc.name}" vs "${orgDoc.name}"`, files: [vendorDoc.name, orgDoc.name], time: new Date() };
     setMsgs(prev => [...prev, userMsg]);
@@ -1339,7 +1345,7 @@ ${data}`,
                             <span className="report-title">{(agentResults[id].text.match(/##\s*REPORT:\s*(.+)/i) || [,'Agent Report'])[1]}</span>
                             <div className="report-header-actions">
                               <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'view')}>🔍 Full Report</button>
-                              <button className="btn-export btn-export-redline" onClick={() => exportReport(agentResults[id].text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
+                              <button className="btn-export btn-export-redline" onClick={() => exportReport(agentResults[id].text, 'redline', vendorDoc?.content || files?.[0]?.content || lastDocContent || '')}>📋 Redline</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pdf')}>📥 PDF</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'word')}>📝 Word</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pptx')}>📊 PPT</button>
@@ -1611,7 +1617,7 @@ ${data}`,
                           <span className="report-title">{(m.text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1]}</span>
                           <div className="report-header-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 Full Report</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || lastDocContent || '')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
@@ -1689,7 +1695,7 @@ ${data}`,
                           <span className="report-disclaimer-inline">Draft for attorney review — not legal advice.</span>
                           <div className="report-bottom-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 View Full Report</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || lastDocContent || '')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
