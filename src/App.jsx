@@ -29,37 +29,81 @@ function downloadBlob(blob, filename) {
 
 /* ─── REPORT PARSER & RENDERER ─── */
 function parseReport(text) {
-  const lines = text.split('\n');
   const items = [];
-  let currentItem = null;
+  // Match finding blocks: emoji + F-NNN | SEVERITY | Section — Title
+  const findingRegex = /(🔴|🟡|🟢|💡|📋)\s*F-(\d+)\s*\|\s*(HIGH RISK|MEDIUM RISK|LOW RISK|RECOMMENDATION|FINDING)\s*\|\s*([^\n]+)/g;
+  let match;
+  const positions = [];
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('🔴 HIGH RISK:')) {
-      if (currentItem) items.push(currentItem);
-      currentItem = { type: 'high', title: trimmed.replace('🔴 HIGH RISK:', '').split('—')[0]?.trim(), body: trimmed.replace('🔴 HIGH RISK:', '').trim() };
-    } else if (trimmed.startsWith('🟡 MEDIUM RISK:')) {
-      if (currentItem) items.push(currentItem);
-      currentItem = { type: 'medium', title: trimmed.replace('🟡 MEDIUM RISK:', '').split('—')[0]?.trim(), body: trimmed.replace('🟡 MEDIUM RISK:', '').trim() };
-    } else if (trimmed.startsWith('🟢 LOW RISK:')) {
-      if (currentItem) items.push(currentItem);
-      currentItem = { type: 'low', title: trimmed.replace('🟢 LOW RISK:', '').split('—')[0]?.trim(), body: trimmed.replace('🟢 LOW RISK:', '').trim() };
-    } else if (trimmed.startsWith('💡 RECOMMENDATION:')) {
-      if (currentItem) items.push(currentItem);
-      currentItem = { type: 'rec', title: trimmed.replace('💡 RECOMMENDATION:', '').split('—')[0]?.trim(), body: trimmed.replace('💡 RECOMMENDATION:', '').trim() };
-    } else if (trimmed.startsWith('📋 FINDING:')) {
-      if (currentItem) items.push(currentItem);
-      currentItem = { type: 'finding', title: trimmed.replace('📋 FINDING:', '').split('—')[0]?.trim(), body: trimmed.replace('📋 FINDING:', '').trim() };
-    } else if (currentItem && trimmed) {
-      currentItem.body += ' ' + trimmed;
-    }
+  while ((match = findingRegex.exec(text)) !== null) {
+    positions.push({ idx: match.index, emoji: match[1], num: match[2], severity: match[3], header: match[4] });
   }
-  if (currentItem) items.push(currentItem);
+
+  // Fallback to old format if new format not found
+  if (positions.length === 0) {
+    const lines = text.split('\n');
+    let currentItem = null;
+    for (const line of lines) {
+      const t = line.trim();
+      const oldMatch = t.match(/^(🔴|🟡|🟢|💡|📋)\s*(?:HIGH RISK|MEDIUM RISK|LOW RISK|RECOMMENDATION|FINDING|F-\d+[^:]*):?\s*(.*)/);
+      if (oldMatch) {
+        if (currentItem) items.push(currentItem);
+        const typeMap = { '🔴': 'high', '🟡': 'medium', '🟢': 'low', '💡': 'rec', '📋': 'finding' };
+        currentItem = { type: typeMap[oldMatch[1]] || 'finding', num: '', title: oldMatch[2].split('—')[0]?.trim(), body: oldMatch[2], reference: '', issue: '', currentWording: '', recommendedWording: '' };
+      } else if (currentItem && t) {
+        currentItem.body += ' ' + t;
+      }
+    }
+    if (currentItem) items.push(currentItem);
+    return items;
+  }
+
+  for (let p = 0; p < positions.length; p++) {
+    const pos = positions[p];
+    const endIdx = p < positions.length - 1 ? positions[p + 1].idx : text.length;
+    const block = text.substring(pos.idx, endIdx);
+    const typeMap = { '🔴': 'high', '🟡': 'medium', '🟢': 'low', '💡': 'rec', '📋': 'finding' };
+
+    const sectionTitle = pos.header.split('—');
+    const section = sectionTitle[0]?.trim() || '';
+    const title = sectionTitle.slice(1).join('—').trim() || section;
+
+    const getField = (label) => {
+      const rx = new RegExp(label + ':\\s*(.+?)(?=\\n(?:REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING|🔴|🟡|🟢|💡|📋|##|---|$))', 's');
+      const m = block.match(rx);
+      return m ? m[1].trim().replace(/^[""]|[""]$/g, '') : '';
+    };
+
+    items.push({
+      type: typeMap[pos.emoji] || 'finding',
+      num: 'F-' + pos.num,
+      title,
+      section,
+      reference: getField('REFERENCE'),
+      issue: getField('ISSUE'),
+      currentWording: getField('CURRENT WORDING'),
+      recommendedWording: getField('RECOMMENDED WORDING'),
+      body: getField('ISSUE') || block.split('\n').slice(1).map(l => l.trim()).filter(l => l && !l.match(/^(REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING):/)).join(' '),
+    });
+  }
   return items;
 }
 
+function parseKeyActions(text) {
+  const section = extractSection(text, 'KEY ACTIONS');
+  if (!section) return [];
+  const lines = section.split('\n').filter(l => l.trim().match(/^KA-\d+/));
+  return lines.map(l => {
+    const parts = l.split('|').map(p => p.trim());
+    return { num: parts[0] || '', severity: parts[1] || '', reference: parts[2] || '', issue: parts[3] || '', recommendation: parts[4] || '' };
+  });
+}
+
 function isReport(text) {
-  const markers = ['🔴 HIGH RISK:', '🟡 MEDIUM RISK:', '🟢 LOW RISK:', '💡 RECOMMENDATION:', '📋 FINDING:'];
+  // Check for new structured format
+  if (/F-\d+\s*\|\s*(HIGH|MEDIUM|LOW)\s*RISK/i.test(text)) return true;
+  // Fallback to old markers
+  const markers = ['🔴', '🟡', '🟢', '💡', '📋'];
   let count = 0;
   for (const m of markers) { if (text.includes(m)) count++; }
   return count >= 2;
@@ -177,7 +221,7 @@ ${actions ? `<h3 style="font-size:16px;color:#1B2A4A;margin-bottom:8px">Key Acti
 <div class="page-break"></div>
 <div class="findings">
 <h2>Detailed Findings (${totalFindings})</h2>
-${items.map(item => `<div class="item item-${item.type}"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><h3>${item.title}</h3><p>${item.body}</p></div>`).join('')}
+${items.map((item, idx) => `<div class="item item-${item.type}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><span style="font-size:12px;color:#C9A84C;font-weight:700;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</span></div><h3>${item.title}</h3>${item.reference ? '<p style="font-size:12px;color:#5B9BD5;margin:2px 0">📌 ' + item.section + (item.reference ? ' — ' + item.reference : '') + '</p>' : ''}${item.issue ? '<p style="margin:6px 0"><strong>Issue:</strong> ' + item.issue + '</p>' : (item.body ? '<p>' + item.body + '</p>' : '')}${item.currentWording ? '<div style="background:#FEF2F2;padding:8px 12px;border-radius:6px;border-left:3px solid #DC2626;margin:6px 0;font-size:13px"><strong style="color:#DC2626">⛔ Current Wording:</strong> <em>"' + item.currentWording + '"</em></div>' : ''}${item.recommendedWording ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#059669">✅ Recommended Wording:</strong> <em>"' + item.recommendedWording + '"</em></div>' : ''}</div>`).join('')}
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
@@ -226,8 +270,8 @@ ${actions ? `<h3>Key Actions</h3><p style="background:#EFF6FF;padding:16px;borde
 <br style="page-break-before:always">
 <h2>Detailed Findings (${totalFindings})</h2>
 <table>
-<tr><th style="width:110px">Severity</th><th style="width:200px">Finding</th><th>Details & Clause Reference</th></tr>
-${items.map(item => `<tr class="${item.type}"><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td>${item.body}</td></tr>`).join('')}
+<tr><th style="width:60px">#</th><th style="width:90px">Severity</th><th style="width:160px">Finding</th><th style="width:160px">Reference</th><th>Issue & Recommendation</th></tr>
+${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</td><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td style="font-size:12px;color:#5B9BD5">${item.section || ''}${item.reference ? '<br>' + item.reference : ''}</td><td>${item.issue || item.body}${item.currentWording ? '<br><br><strong style="color:#DC2626">⛔ Current:</strong> <em>' + item.currentWording + '</em>' : ''}${item.recommendedWording ? '<br><strong style="color:#059669">✅ Recommended:</strong> <em>' + item.recommendedWording + '</em>' : ''}</td></tr>`).join('')}
 </table>
 <hr style="border:none;border-top:2px solid #C9A84C;margin-top:40px">
 <p style="text-align:center;font-size:11px;color:#94a3b8">Draft for attorney review — not legal advice | Lexicon AI | ${ts}</p>
@@ -238,10 +282,10 @@ ${items.map(item => `<tr class="${item.type}"><td><span class="badge" style="bac
   // ═══ EXCEL — CSV with structured data ═══
   if (format === 'csv') {
     const sevMap = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW', rec: 'RECOMMENDATION', finding: 'INFO' };
-    const rows = ['"#","Severity","Priority","Finding Title","Details & Clause Reference","Status","Assigned To","Due Date","Report Date"'];
+    const rows = ['"Finding #","Severity","Priority","Title","Section Reference","Issue","Current Wording","Recommended Wording","Status","Assigned To","Due Date","Report Date"'];
     items.forEach((item, i) => {
       const priority = item.type === 'high' ? '1-Critical' : item.type === 'medium' ? '2-High' : item.type === 'low' ? '3-Medium' : '4-Low';
-      rows.push(`"${i + 1}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${item.body.replace(/"/g, '""')}","Open","","","${ts}"`);
+      rows.push(`"${item.num || 'F-' + String(i+1).padStart(3,'0')}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${(item.section || '').replace(/"/g, '""')}","${(item.issue || item.body).replace(/"/g, '""')}","${(item.currentWording || '').replace(/"/g, '""')}","${(item.recommendedWording || '').replace(/"/g, '""')}","Open","","","${ts}"`);
     });
     if (summary) rows.push(`"","SUMMARY","","Risk Summary","${summary.replace(/"/g, '""')}","","","","${ts}"`);
     if (actions) rows.push(`"","ACTIONS","","Key Actions","${actions.replace(/"/g, '""').replace(/\n/g, ' ')}","","","","${ts}"`);
@@ -398,34 +442,47 @@ export default function App() {
     setInput('');
     setLoading(true);
 
-    const sys = `You are a senior legal AI assistant for a high-profile in-house legal team.
+    const sys = `You are a senior legal AI assistant for a high-profile in-house legal team. You provide specific, actionable analysis with exact wording recommendations that the legal team can accept or reject.
 
-CRITICAL OUTPUT RULES — follow these exactly every time:
-1. ANALYZE the actual content NOW. Never describe what you would do. Do it.
-2. Never ask "would you like me to proceed?" — deliver the full analysis immediately.
-3. When document text appears between --- UPLOADED FILE --- markers, that IS the content. Read and analyze every section.
+RULES:
+1. ANALYZE the actual content NOW. Never describe what you would do — do it.
+2. Never ask to proceed. Deliver the full analysis immediately.
+3. Content between --- UPLOADED FILE --- markers IS the document. Read every section.
 
-OUTPUT FORMAT — use these exact markers so the report renders with color-coded risk highlights:
+OUTPUT FORMAT — use these exact markers. The UI parses them into a structured report:
 
-Start with a title line: ## REPORT: [Document Name] Analysis
+## REPORT: [Document Name] Analysis
 
-Then for each finding, use exactly one of these prefixes:
-🔴 HIGH RISK: [title] — [explanation referencing specific clauses/language from the document]
-🟡 MEDIUM RISK: [title] — [explanation with clause references]
-🟢 LOW RISK: [title] — [explanation]
-💡 RECOMMENDATION: [title] — [specific actionable recommendation]
-📋 FINDING: [title] — [neutral observation with document reference]
+For EACH finding, use this EXACT multi-line format (all 5 lines required):
 
-After all findings, add:
+🔴 F-[NNN] | HIGH RISK | [Section Reference] — [Short Title]
+REFERENCE: [Section number, clause title, and specific paragraph/subsection location]
+ISSUE: [Clear description of the risk, referencing specific language from the document]
+CURRENT WORDING: "[Quote the exact problematic language from the document]"
+RECOMMENDED WORDING: "[Provide specific replacement language the legal team can adopt or reject]"
+
+Use 🔴 for HIGH RISK, 🟡 for MEDIUM RISK, 🟢 for LOW RISK, 💡 for RECOMMENDATION, 📋 for FINDING.
+Number findings sequentially: F-001, F-002, F-003, etc.
+Every finding MUST include all 5 lines. For recommendations, CURRENT WORDING can be "N/A" and RECOMMENDED WORDING contains the suggested addition.
+
 ## RISK SUMMARY
-A 2-3 sentence overall risk assessment.
+Write a professional executive summary (3-4 sentences): overall risk posture, the most critical exposure areas, and a clear accept/reject/negotiate recommendation. Include a one-line risk rating like "Overall Risk Rating: HIGH — significant commercial and legal exposure requiring negotiation before execution."
 
 ## KEY ACTIONS
-Numbered list of the top 3-5 most important actions the legal team should take, in priority order.
+For each action use this exact format:
+KA-[N] | [HIGH/MEDIUM/LOW] | [Section reference] | [What needs to change] | [Specific recommendation with proposed wording or approach]
 
-End with exactly: ---\nDraft for attorney review — not legal advice.
+Number actions KA-1, KA-2, etc. Order by priority (highest risk first). Each action must reference the finding number (F-NNN) it relates to.
 
-Be specific. Reference actual clause numbers, section titles, dollar amounts, dates, and quoted language from the document. Every finding must cite something concrete from the content.
+End with exactly: ---
+Draft for attorney review — not legal advice.
+
+QUALITY RULES:
+- Quote EXACT language from the document in CURRENT WORDING fields
+- RECOMMENDED WORDING must be specific enough to copy-paste into a redline
+- Reference section numbers, clause titles, and subsection identifiers
+- Include dollar amounts, dates, percentages when present in the document
+- Be precise: "Section 7.3, paragraph 2" not just "the IP section"
 
 ${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc + '. Apply this methodology.' : ''}
 ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
@@ -789,25 +846,50 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
                             <div key={j} className={`report-item report-item-${item.type}`}>
                               <div className="report-item-header">
                                 <span className={`report-badge report-badge-${item.type}`}>
-                                  {item.type === 'high' ? '🔴 HIGH RISK' : item.type === 'medium' ? '🟡 MEDIUM' : item.type === 'low' ? '🟢 LOW' : item.type === 'rec' ? '💡 ACTION' : '📋 INFO'}
+                                  {item.type === 'high' ? '🔴 HIGH' : item.type === 'medium' ? '🟡 MEDIUM' : item.type === 'low' ? '🟢 LOW' : item.type === 'rec' ? '💡 REC' : '📋 INFO'}
                                 </span>
+                                {item.num && <span className="report-item-num">{item.num}</span>}
                                 <span className="report-item-title">{item.title}</span>
                               </div>
-                              <div className="report-item-body">{item.body}</div>
+                              {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
+                              {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
+                              {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
+                              {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
+                              {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
                             </div>
                           ))}
                         </div>
 
-                        {/* Summary & Actions */}
+                        {/* Risk Summary */}
                         {extractSection(m.text, 'RISK SUMMARY') && (
                           <div className="report-summary">
-                            <strong>Risk Summary:</strong> {extractSection(m.text, 'RISK SUMMARY')}
+                            <div className="report-summary-title">📊 Risk Summary</div>
+                            <div className="report-summary-text">{extractSection(m.text, 'RISK SUMMARY')}</div>
                           </div>
                         )}
-                        {extractSection(m.text, 'KEY ACTIONS') && (
-                          <div className="report-actions">
-                            <strong>Key Actions:</strong>
-                            <div className="report-actions-text">{extractSection(m.text, 'KEY ACTIONS')}</div>
+
+                        {/* Key Actions Table */}
+                        {parseKeyActions(m.text).length > 0 && (
+                          <div className="report-ka-section">
+                            <div className="report-ka-title">🎯 Key Actions Required</div>
+                            <div className="report-ka-table">
+                              <div className="ka-header-row">
+                                <span className="ka-col ka-col-num">#</span>
+                                <span className="ka-col ka-col-sev">Risk</span>
+                                <span className="ka-col ka-col-ref">Reference</span>
+                                <span className="ka-col ka-col-issue">Issue</span>
+                                <span className="ka-col ka-col-rec">Recommendation</span>
+                              </div>
+                              {parseKeyActions(m.text).map((ka, k) => (
+                                <div key={k} className={`ka-row ka-row-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'medium' : 'low'}`}>
+                                  <span className="ka-col ka-col-num">{ka.num}</span>
+                                  <span className="ka-col ka-col-sev"><span className={`ka-sev-badge ${ka.severity.toLowerCase().includes('high') ? 'ka-sev-high' : ka.severity.toLowerCase().includes('medium') ? 'ka-sev-med' : 'ka-sev-low'}`}>{ka.severity}</span></span>
+                                  <span className="ka-col ka-col-ref">{ka.reference}</span>
+                                  <span className="ka-col ka-col-issue">{ka.issue}</span>
+                                  <span className="ka-col ka-col-rec">{ka.recommendation}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
 
