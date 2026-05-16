@@ -300,7 +300,7 @@
 
 
 /* ═══ REPORT CARD STYLES ═══ */
-.msg-report { max-width: 95% !important; background: var(--bg-card) !important; border: 1px solid var(--gold-border) !important; border-radius: 14px !important; padding: 0 !important; overflow: hidden; }
+.msg-report { max-width: 95% !important; background: var(--bg-card) !important; border: 1px solid var(--gold-border) !important; border-radius: 14px !important; padding: 0 !important; }
 .report-card { font-family: var(--font-body); }
 .report-header { display: flex; align-items: center; gap: 10px; padding: 16px 22px; background: linear-gradient(135deg, #16213e, #1B2A4A); border-bottom: 2px solid var(--gold); flex-wrap: wrap; }
 .report-icon { font-size: 24px; }

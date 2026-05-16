@@ -128,8 +128,8 @@ function exportReport(text, format) {
   const counts = { high: items.filter(i => i.type === 'high').length, medium: items.filter(i => i.type === 'medium').length, low: items.filter(i => i.type === 'low').length, rec: items.filter(i => i.type === 'rec').length, finding: items.filter(i => i.type === 'finding').length };
   const totalFindings = items.length;
 
-  // ═══ PDF — opens in new tab with title page + dashboard + details ═══
-  if (format === 'pdf') {
+  // ═══ PDF / VIEW — opens in new tab with title page + dashboard + details ═══
+  if (format === 'pdf' || format === 'view') {
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
 <style>
 @media print { .no-print{display:none} .page-break{page-break-before:always} body{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
@@ -237,15 +237,17 @@ ${items.map((item, idx) => `<div class="item item-${item.type}"><div style="disp
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
-    // Reliable print: write to new window, then trigger print
+    // Reliable: write to new window
     const printWin = window.open('', '_blank', 'width=900,height=700');
     if (printWin) {
       printWin.document.open();
       printWin.document.write(html);
       printWin.document.close();
-      printWin.onload = function() { setTimeout(function() { printWin.focus(); printWin.print(); }, 400); };
-      // Fallback if onload doesn't fire
-      setTimeout(function() { try { printWin.focus(); printWin.print(); } catch(e) {} }, 1500);
+      // Only trigger print for 'pdf' format, not 'view'
+      if (format === 'pdf') {
+        printWin.onload = function() { setTimeout(function() { printWin.focus(); printWin.print(); }, 400); };
+        setTimeout(function() { try { printWin.focus(); printWin.print(); } catch(e) {} }, 1500);
+      }
     } else {
       downloadBlob(new Blob([html], { type: 'text/html' }), fname + '-' + ts + '.html');
     }
@@ -1079,7 +1081,8 @@ ${data}`,
                             <span className="report-icon">⚖</span>
                             <span className="report-title">{(agentResults[id].text.match(/##\s*REPORT:\s*(.+)/i) || [,'Agent Report'])[1]}</span>
                             <div className="report-header-actions">
-                              <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'pdf')}>🔍 Full Report</button>
+                              <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'view')}>🔍 Full Report</button>
+                              <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pdf')}>📥 PDF</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'word')}>📝 Word</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pptx')}>📊 PPT</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'csv')}>📈 Excel</button>
@@ -1320,7 +1323,8 @@ ${data}`,
                           <span className="report-icon">⚖</span>
                           <span className="report-title">{(m.text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1]}</span>
                           <div className="report-header-actions">
-                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'pdf')}>🔍 Full Report</button>
+                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 Full Report</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'csv')}>📈 Excel</button>
@@ -1330,10 +1334,10 @@ ${data}`,
                         {/* Risk summary counts */}
                         <div className="report-counts">
                           {[
-                            { type: 'high', label: 'High Risk', icon: '🔴', count: (m.text.match(/🔴 HIGH RISK:/g) || []).length },
-                            { type: 'medium', label: 'Medium Risk', icon: '🟡', count: (m.text.match(/🟡 MEDIUM RISK:/g) || []).length },
-                            { type: 'low', label: 'Low Risk', icon: '🟢', count: (m.text.match(/🟢 LOW RISK:/g) || []).length },
-                            { type: 'rec', label: 'Recommendations', icon: '💡', count: (m.text.match(/💡 RECOMMENDATION:/g) || []).length },
+                            { type: 'high', label: 'High Risk', icon: '🔴', count: (m.text.match(/🔴/g) || []).length },
+                            { type: 'medium', label: 'Medium Risk', icon: '🟡', count: (m.text.match(/🟡/g) || []).length },
+                            { type: 'low', label: 'Low Risk', icon: '🟢', count: (m.text.match(/🟢/g) || []).length },
+                            { type: 'rec', label: 'Recommendations', icon: '💡', count: (m.text.match(/💡/g) || []).length },
                           ].filter(c => c.count > 0).map((c, j) => (
                             <span key={j} className={`count-badge count-${c.type}`}>{c.icon} {c.count} {c.label}</span>
                           ))}
@@ -1396,7 +1400,8 @@ ${data}`,
                         <div className="report-bottom-bar">
                           <span className="report-disclaimer-inline">Draft for attorney review — not legal advice.</span>
                           <div className="report-bottom-actions">
-                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'pdf')}>🔍 View Full Report</button>
+                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 View Full Report</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'csv')}>📈 Excel</button>
