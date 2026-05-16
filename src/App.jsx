@@ -316,128 +316,154 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
     downloadBlob(new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8' }), `${fname}-${ts}.csv`);
   }
 
-  // ═══ REDLINE DOC — Word document with highlighted findings and comments ═══
+  // ═══ REDLINE DOC — Full document preserved with track changes and margin comments ═══
   if (format === 'redline') {
-    // Get original document text from parameter
     let originalText = originalDocText || '';
+    if (!originalText) {
+      alert('No original document found. Upload a document first, then run analysis, then click Redline.');
+      return;
+    }
 
-    // Build highlighted document
-    let docBody = originalText || '';
-    const highlightColors = { high: '#FFD4D4', medium: '#FFF3CD', low: '#D4EDDA', rec: '#CCE5FF', finding: '#E8E8E8' };
-    const riskLabels = { high: '🔴 HIGH RISK', medium: '🟡 MEDIUM RISK', low: '🟢 LOW RISK', rec: '💡 RECOMMENDATION', finding: '📋 FINDING' };
+    // Escape HTML in original text but preserve line breaks
+    let docHtml = originalText
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>\n');
 
-    // Sort findings by position in document (longest match first to avoid nested replacements)
-    const sortedItems = [...items].filter(i => i.currentWording).sort((a, b) => b.currentWording.length - a.currentWording.length);
-    const commentBoxes = [];
+    const highlightBg = { high: '#FECACA', medium: '#FDE68A', low: '#A7F3D0', rec: '#BFDBFE', finding: '#E5E7EB' };
+    const highlightBorder = { high: '#DC2626', medium: '#D97706', low: '#059669', rec: '#2563EB', finding: '#6B7280' };
+    const riskLabels = { high: 'HIGH RISK', medium: 'MEDIUM RISK', low: 'LOW RISK', rec: 'RECOMMENDATION', finding: 'FINDING' };
+    const matched = [];
 
-    sortedItems.forEach((item, idx) => {
-      if (!item.currentWording || item.currentWording.length < 5) return;
-      const searchText = item.currentWording.slice(0, 200); // Limit search length
-      const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // For each finding with currentWording, highlight it in the document
+    const sortedItems = [...items].filter(i => i.currentWording && i.currentWording.length >= 5)
+      .sort((a, b) => b.currentWording.length - a.currentWording.length);
+
+    sortedItems.forEach((item) => {
+      // Escape the search text for HTML-escaped content
+      let searchText = item.currentWording.slice(0, 200)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Allow line breaks between words
+      escaped = escaped.replace(/\s+/g, '(?:\\s|<br\\/?>\n?)+');
 
       try {
-        const rx = new RegExp('(' + escapedSearch.slice(0, 100) + ')', 'i');
-        if (rx.test(docBody)) {
-          const commentId = `c${idx}`;
-          const bg = highlightColors[item.type] || '#FFF3CD';
-          docBody = docBody.replace(rx, `<span style="background:${bg};padding:2px 4px;border-radius:3px;border-bottom:2px solid ${item.type === 'high' ? '#DC2626' : item.type === 'medium' ? '#D97706' : '#059669'}"><a name="${commentId}"></a>$1<sup style="color:#DC2626;font-weight:bold;font-size:10px">[${item.num}]</sup></span>`);
-          commentBoxes.push({ id: commentId, item });
+        const rx = new RegExp('(' + escaped.slice(0, 300) + ')', 'i');
+        if (rx.test(docHtml)) {
+          const bg = highlightBg[item.type];
+          const border = highlightBorder[item.type];
+          // Track change markup: highlight original + show recommended as insertion
+          const insertion = item.recommendedWording
+            ? `<span style="color:#059669;font-weight:600;background:#ECFDF5;padding:1px 4px;border-radius:2px;text-decoration:underline" title="RECOMMENDED: ${item.recommendedWording.replace(/"/g, '&quot;').slice(0,200)}">[INSERT: ${item.recommendedWording.slice(0,80)}${item.recommendedWording.length > 80 ? '…' : ''}]</span>`
+            : '';
+          docHtml = docHtml.replace(rx,
+            `<span style="background:${bg};padding:1px 3px;border-bottom:2px solid ${border};position:relative" title="${item.num}: ${item.issue?.slice(0,100) || ''}">`
+            + `<sup style="background:${border};color:white;padding:0 4px;border-radius:3px;font-size:8pt;font-weight:700;margin-right:2px">${item.num}</sup>`
+            + `<span style="text-decoration:line-through;color:#DC2626">$1</span></span> `
+            + insertion + ' '
+          );
+          matched.push(item);
         }
       } catch(e) {}
     });
 
-    // Build the Word HTML document
+    const unmatched = items.filter(i => !matched.includes(i));
+
     const redlineHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><title>Redline — ${title}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
 <style>
-@page { size: A4; margin: 2.5cm; }
-body { font-family: Calibri, Arial, sans-serif; font-size: 12pt; line-height: 1.8; color: #1a1a1a; }
-.doc-header { background: #0E2A52; color: white; padding: 20px 28px; margin: -20px -20px 24px -20px; border-radius: 4px; }
-.doc-header h1 { font-size: 18pt; margin: 0 0 6px; color: #C9A84C; }
-.doc-header p { font-size: 10pt; color: #A8B8D8; margin: 0; }
-.legend { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px; font-size: 10pt; }
-.legend-item { display: inline-block; margin-right: 18px; padding: 2px 8px; border-radius: 3px; font-size: 9pt; font-weight: 600; }
-.doc-content { white-space: pre-wrap; font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.8; border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; margin-bottom: 24px; }
-.comments-section { page-break-before: always; }
-.comments-section h2 { color: #0E2A52; font-size: 16pt; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; margin-bottom: 16px; }
-.comment-box { border-left: 4px solid; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 12px; background: #f8f9fa; page-break-inside: avoid; }
-.comment-box.high { border-color: #DC2626; }
-.comment-box.medium { border-color: #D97706; }
-.comment-box.low { border-color: #059669; }
-.comment-box.rec { border-color: #2563EB; }
-.cb-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.cb-badge { padding: 2px 10px; border-radius: 10px; font-size: 9pt; font-weight: 700; color: white; }
-.cb-badge.high { background: #DC2626; } .cb-badge.medium { background: #D97706; } .cb-badge.low { background: #059669; } .cb-badge.rec { background: #2563EB; }
-.cb-num { font-family: Consolas, monospace; font-size: 10pt; color: #C9A84C; font-weight: 700; }
-.cb-title { font-weight: 700; font-size: 11pt; color: #0E2A52; }
-.cb-field { margin-top: 6px; font-size: 10pt; }
-.cb-field strong { color: #333; }
-.cb-current { background: #FEF2F2; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #DC2626; margin-top: 8px; font-size: 10pt; }
-.cb-recommended { background: #ECFDF5; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #059669; margin-top: 6px; font-size: 10pt; }
-.cb-action { margin-top: 8px; padding: 6px 12px; background: #EFF6FF; border-radius: 4px; font-size: 9pt; }
-.footer-note { text-align: center; font-size: 9pt; color: #888; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 12px; }
+@page { size: A4; margin: 2cm 2cm 2cm 2cm; }
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; }
+table { border-collapse: collapse; width: 100%; }
+.header-bar { background: #0E2A52; color: white; padding: 16px 24px; margin-bottom: 16px; }
+.header-bar h1 { font-size: 16pt; margin: 0 0 4px; color: #C9A84C; }
+.header-bar p { font-size: 9pt; color: #93A3C0; margin: 2px 0; }
+.legend { background: #f0f4f8; border: 1px solid #d1d9e6; padding: 10px 16px; margin-bottom: 16px; font-size: 9pt; }
+.legend b { color: #0E2A52; }
+.leg { display: inline-block; padding: 1px 8px; margin: 2px 6px 2px 0; border-radius: 3px; font-weight: 600; font-size: 8pt; }
+.track-info { background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; font-size: 9pt; }
+.doc-body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.8; border: 1px solid #d1d9e6; padding: 24px; margin-bottom: 8px; }
+.section-break { page-break-before: always; margin-top: 0; }
+h2.sec { color: #0E2A52; font-size: 14pt; border-bottom: 2px solid #C9A84C; padding-bottom: 6px; margin: 24px 0 12px; font-family: Calibri; }
+.finding-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10pt; }
+.finding-table td { padding: 8px 12px; vertical-align: top; border: 1px solid #e2e8f0; }
+.ft-label { width: 140px; font-weight: 700; color: #334155; background: #f8fafc; }
+.ft-current { background: #FEF2F2; }
+.ft-recommend { background: #ECFDF5; }
+.ft-header { padding: 10px 12px; font-weight: 700; font-size: 11pt; }
+.ft-high .ft-header { background: #DC2626; color: white; }
+.ft-medium .ft-header { background: #D97706; color: white; }
+.ft-low .ft-header { background: #059669; color: white; }
+.ft-rec .ft-header { background: #2563EB; color: white; }
+.decision-row { background: #EFF6FF; }
+.decision-row td { padding: 10px 12px; }
+.org-comment { border: 1px dashed #94A3B8; padding: 8px; margin-top: 6px; min-height: 40px; color: #64748B; font-style: italic; font-size: 9pt; }
+.version-box { background: #F0FDF4; border: 1px solid #86EFAC; padding: 10px 14px; margin-top: 16px; font-size: 9pt; border-radius: 4px; }
+.footer-note { text-align: center; font-size: 8pt; color: #94A3B8; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
 </style></head><body>
 
-<div class="doc-header">
-<h1>⚖ Redline Document — ${title}</h1>
-<p>Generated ${ts} | ${items.length} findings highlighted | Lexicon AI — Legal Intelligence Platform</p>
+<div class="header-bar">
+<h1>⚖ REDLINE REVIEW — Track Changes Document</h1>
+<p>Document: ${title} | Generated: ${ts} | Findings: ${items.length} (${matched.length} marked in document, ${unmatched.length} additional)</p>
+<p>Version: 1.0 — Initial AI Review | Status: PENDING ORGANIZATION REVIEW</p>
 </div>
 
 <div class="legend">
-<strong>Legend:</strong>
-<span class="legend-item" style="background:#FFD4D4">🔴 High Risk</span>
-<span class="legend-item" style="background:#FFF3CD">🟡 Medium Risk</span>
-<span class="legend-item" style="background:#D4EDDA">🟢 Low Risk</span>
-<span class="legend-item" style="background:#CCE5FF">💡 Recommendation</span>
-<br><em style="font-size:9pt;color:#666">Highlighted text indicates findings. Click [F-NNN] references to jump to comments below.</em>
+<b>Track Changes Legend:</b>
+<span class="leg" style="background:#FECACA;border-bottom:2px solid #DC2626"><s>Strikethrough red</s></span> = Text to be replaced (HIGH RISK)
+<span class="leg" style="background:#FDE68A;border-bottom:2px solid #D97706"><s>Strikethrough</s></span> = Text to be replaced (MEDIUM)
+<span class="leg" style="background:#A7F3D0;border-bottom:2px solid #059669"><s>Strikethrough</s></span> = Text to be replaced (LOW)
+<span class="leg" style="color:#059669;text-decoration:underline;font-weight:600">[INSERT: green underlined]</span> = Recommended replacement text
+<span style="background:#DC2626;color:white;padding:0 4px;border-radius:3px;font-size:8pt;font-weight:700">F-001</span> = Finding reference number
 </div>
 
-<h2 style="color:#0E2A52;font-size:14pt">Reviewed Document</h2>
-<div class="doc-content">${docBody || '<em style="color:#999">No original document uploaded. Upload a document and re-run analysis to generate a redline.</em>'}</div>
-
-<div class="comments-section">
-<h2>Comments & Recommended Changes (${commentBoxes.length} findings)</h2>
-<p style="font-size:10pt;color:#666;margin-bottom:16px">Review each comment below. Accept the recommended wording or reject to keep the original language.</p>
-
-${commentBoxes.map(({ id, item }) => `
-<div class="comment-box ${item.type}">
-  <div class="cb-header">
-    <span class="cb-badge ${item.type}">${riskLabels[item.type] || 'FINDING'}</span>
-    <span class="cb-num">${item.num}</span>
-    <span class="cb-title">${item.title}</span>
-  </div>
-  ${item.reference ? `<div class="cb-field"><strong>📌 Reference:</strong> ${item.reference}</div>` : ''}
-  ${item.issue ? `<div class="cb-field"><strong>Issue:</strong> ${item.issue}</div>` : ''}
-  ${item.currentWording ? `<div class="cb-current"><strong>⛔ Current Wording:</strong><br/><em>"${item.currentWording}"</em></div>` : ''}
-  ${item.recommendedWording ? `<div class="cb-recommended"><strong>✅ Recommended Wording:</strong><br/><em>"${item.recommendedWording}"</em></div>` : ''}
-  <div class="cb-action"><strong>Action Required:</strong> ☐ Accept recommended change &nbsp; ☐ Reject — keep original &nbsp; ☐ Modify</div>
+<div class="track-info">
+<b>📋 Instructions for Reviewers:</b> This document preserves the <u>complete original text</u> with AI-recommended changes shown as track changes.
+Red strikethrough = remove this text. Green [INSERT] = add this text. Review each finding below, then mark your decision:
+<b>Accept</b> (use AI recommendation), <b>Reject</b> (keep original), or <b>Modify</b> (write your own version in the Organization Comments box).
+After review, re-upload this document for AI to review your decisions and provide updated recommendations.
 </div>
-`).join('')}
 
-${items.filter(i => i.currentWording && !commentBoxes.find(c => c.item.num === i.num)).length > 0 ? `
-<h3 style="color:#D97706;margin-top:24px">Additional Findings (not matched in document text)</h3>
-${items.filter(i => !commentBoxes.find(c => c.item.num === i.num)).map(item => `
-<div class="comment-box ${item.type}">
-  <div class="cb-header">
-    <span class="cb-badge ${item.type}">${riskLabels[item.type] || 'FINDING'}</span>
-    <span class="cb-num">${item.num}</span>
-    <span class="cb-title">${item.title}</span>
-  </div>
-  ${item.issue ? `<div class="cb-field"><strong>Issue:</strong> ${item.issue}</div>` : ''}
-  ${item.currentWording ? `<div class="cb-current"><strong>⛔ Current Wording:</strong><br/><em>"${item.currentWording}"</em></div>` : ''}
-  ${item.recommendedWording ? `<div class="cb-recommended"><strong>✅ Recommended Wording:</strong><br/><em>"${item.recommendedWording}"</em></div>` : ''}
-  <div class="cb-action"><strong>Action Required:</strong> ☐ Accept &nbsp; ☐ Reject &nbsp; ☐ Modify</div>
-</div>
-`).join('')}` : ''}
+<h2 class="sec">ORIGINAL DOCUMENT WITH TRACKED CHANGES</h2>
+<div class="doc-body">${docHtml}</div>
+
+<div class="section-break"></div>
+<h2 class="sec">DETAILED FINDINGS & DECISION LOG (${items.length} findings)</h2>
+<p style="font-size:9pt;color:#64748B;margin-bottom:16px">For each finding: review the issue, compare current vs recommended wording, mark your decision, and add any comments for the counterparty or internal notes.</p>
+
+${items.map((item, idx) => `
+<table class="finding-table ft-${item.type}">
+<tr><td colspan="2" class="ft-header">${item.num || 'F-' + String(idx+1).padStart(3,'0')} | ${riskLabels[item.type] || 'FINDING'} | ${item.title}</td></tr>
+${item.reference ? `<tr><td class="ft-label">📌 Reference</td><td>${item.reference}</td></tr>` : ''}
+${item.section ? `<tr><td class="ft-label">📄 Section</td><td>${item.section}</td></tr>` : ''}
+<tr><td class="ft-label">⚠️ Issue</td><td>${item.issue || item.body || ''}</td></tr>
+${item.currentWording ? `<tr class="ft-current"><td class="ft-label">⛔ Current Wording</td><td><em>"${item.currentWording}"</em></td></tr>` : ''}
+${item.recommendedWording ? `<tr class="ft-recommend"><td class="ft-label">✅ AI Recommendation</td><td><em>"${item.recommendedWording}"</em></td></tr>` : ''}
+<tr class="decision-row"><td class="ft-label">🏢 Decision</td><td>
+<b>☐ ACCEPT</b> — Use AI recommended wording &nbsp;&nbsp;
+<b>☐ REJECT</b> — Keep original wording &nbsp;&nbsp;
+<b>☐ MODIFY</b> — See organization comments below &nbsp;&nbsp;
+<b>☐ ESCALATE</b> — Needs senior review
+</td></tr>
+<tr><td class="ft-label">💬 Org Comments</td><td><div class="org-comment">[Organization: Add your comments, alternative wording, or negotiation notes here]</div></td></tr>
+<tr><td class="ft-label">🔄 Status</td><td>☐ Open &nbsp; ☐ In Negotiation &nbsp; ☐ Agreed &nbsp; ☐ Disputed &nbsp; ☐ Closed</td></tr>
+</table>
+`).join('\n')}
+
+<div class="version-box">
+<b>📋 Version History & Re-Review Instructions:</b><br/>
+<b>v1.0</b> (${ts}) — Initial AI review. ${items.length} findings identified.<br/>
+<b>Next step:</b> Organization completes decisions above, adds comments, then re-uploads this document to the AI Agent for follow-up review.
+The AI will read your Accept/Reject/Modify decisions and comments, then provide updated recommendations for any disputed or modified items.<br/>
+<em>Tip: When re-uploading, use the prompt: "Review this marked-up document. We have added our decisions and comments. Provide updated recommendations for items marked MODIFY or ESCALATE."</em>
 </div>
 
 <div class="footer-note">
-  CONFIDENTIAL — Draft for attorney review — not legal advice<br>
-  Lexicon AI — Legal Intelligence Platform | ${ts}
+CONFIDENTIAL — Draft for review — not legal advice | Lexicon AI — Legal Intelligence Platform | ${ts}
 </div>
 </body></html>`;
 
-    downloadBlob(new Blob(['\uFEFF' + redlineHtml], { type: 'application/msword' }), `${fname}-REDLINE-${ts}.doc`);
+    downloadBlob(new Blob(['\uFEFF' + redlineHtml], { type: 'application/msword' }), `${fname}-REDLINE-v1-${ts}.doc`);
   }
 
   // ═══ POWERPOINT — professional slide deck ═══
