@@ -564,3 +564,75 @@
   .area-grid-v2 { grid-template-columns: repeat(2, 1fr); }
   .hero-actions { flex-direction: column; }
 }
+
+/* ══════════════════════════════════════════
+   FIFA RANKINGS TABLE — PRACTICE AREAS
+   ══════════════════════════════════════════ */
+
+/* Rankings Header */
+.rankings-header { position: relative; height: 160px; border-radius: 20px; overflow: hidden; margin-bottom: 24px; background: linear-gradient(135deg, #0a1628, #1a2744, #0f2035); }
+.rankings-header-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 50%, rgba(201,168,76,0.08), transparent 60%), radial-gradient(ellipse at 80% 30%, rgba(91,155,213,0.06), transparent 50%); }
+.rankings-header-content { position: relative; z-index: 1; padding: 48px 40px; }
+.rankings-title { font-family: var(--font-display); font-size: 38px; font-weight: 700; background: linear-gradient(135deg, #C9A84C, #E8D5A0, #C9A84C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 6px; }
+.rankings-subtitle { font-family: var(--font-body); font-size: 14px; color: var(--text-dim); }
+
+/* Top 3 Podium */
+.podium-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+.podium-card { position: relative; padding: 28px 24px; border-radius: 18px; background: rgba(17,22,39,0.6); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden; text-align: center; }
+.podium-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--accent) -200%, transparent 70%); opacity: 0.08; transition: opacity 0.3s; }
+.podium-card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 16px 48px rgba(0,0,0,0.3), 0 0 40px rgba(201,168,76,0.06); }
+.podium-card:hover::before { opacity: 0.15; }
+.podium-1 { border-top: 3px solid #C9A84C; }
+.podium-2 { border-top: 3px solid #A8B4C4; }
+.podium-3 { border-top: 3px solid #CD7F32; }
+.podium-rank { font-family: var(--font-display); font-size: 48px; font-weight: 800; line-height: 1; margin-bottom: 8px; }
+.podium-1 .podium-rank { background: linear-gradient(135deg, #C9A84C, #F5E6B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.podium-2 .podium-rank { background: linear-gradient(135deg, #8A9AB5, #C8D4E5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.podium-3 .podium-rank { background: linear-gradient(135deg, #CD7F32, #E8B87D); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.podium-icon { font-size: 42px; display: block; margin-bottom: 10px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+.podium-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.podium-stats { margin-bottom: 10px; }
+.podium-points { font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--accent); }
+.podium-label { font-family: var(--font-body); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-left: 4px; }
+.podium-desc { font-family: var(--font-body); font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+
+/* Rankings Table */
+.rankings-table { background: rgba(17,22,39,0.4); border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); overflow: hidden; }
+.rankings-table-header { display: flex; align-items: center; padding: 14px 24px; background: rgba(10,22,40,0.6); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.rankings-table-header span { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); font-weight: 600; }
+.rt-col-rank { width: 60px; } .rt-col-team { width: 220px; } .rt-col-desc { flex: 1; } .rt-col-pts { width: 80px; text-align: center; } .rt-col-action { width: 100px; }
+
+.rankings-row { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: all 0.25s; position: relative; }
+.rankings-row:hover { background: rgba(201,168,76,0.04); }
+.rankings-row::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); opacity: 0; transition: opacity 0.3s; }
+.rankings-row:hover::after { opacity: 1; }
+.rankings-row-top { background: rgba(201,168,76,0.02); }
+.rt-rank { width: 60px; font-family: var(--font-display); font-size: 22px; font-weight: 800; color: rgba(201,168,76,0.3); }
+.rankings-row-top .rt-rank { color: var(--gold); }
+.rt-team { width: 220px; display: flex; align-items: center; gap: 12px; }
+.rt-badge { font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+.rt-name { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.rt-desc { flex: 1; font-family: var(--font-body); font-size: 12px; color: var(--text-dim); line-height: 1.4; padding-right: 16px; }
+.rt-points { width: 80px; text-align: center; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--accent); }
+.rt-btn { width: 100px; }
+
+/* Area Detail Header */
+.area-detail-header { background: rgba(17,22,39,0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 18px; padding: 28px 32px; margin-bottom: 20px; position: relative; overflow: hidden; }
+.area-detail-header::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--accent) -300%, transparent 60%); opacity: 0.06; }
+.adh-inner { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.adh-icon { font-size: 52px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+.adh-name { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--text-primary); }
+.adh-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+.adh-count { font-family: var(--font-body); font-size: 12px; color: var(--gold); font-weight: 600; margin-top: 6px; display: inline-block; padding: 3px 12px; border-radius: 10px; background: rgba(201,168,76,0.1); }
+
+/* Skill rank number in listing */
+.skill-rank-num { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: rgba(201,168,76,0.15); min-width: 28px; text-align: center; flex-shrink: 0; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  .podium-row { grid-template-columns: 1fr; }
+  .rankings-row { flex-wrap: wrap; gap: 8px; }
+  .rt-desc { display: none; }
+  .rt-btn { width: auto; }
+  .rankings-title { font-size: 28px; }
+}

@@ -993,7 +993,16 @@ ${data}`,
         {/* ══════════════════ SKILLS BROWSER ══════════════════ */}
         {tab === 'skills' && (
           <div className="fade-wrapper visible">
-            {/* Search + Filter Bar */}
+            {/* FIFA-style Rankings Header */}
+            <div className="rankings-header">
+              <div className="rankings-header-bg" />
+              <div className="rankings-header-content">
+                <h1 className="rankings-title">Practice Area Rankings</h1>
+                <p className="rankings-subtitle">{PRACTICE_AREAS.length} areas • {totalSkills} AI skills • Click any area to explore</p>
+              </div>
+            </div>
+
+            {/* Search + Filter Bar — FIFA confederation tabs style */}
             <div className="skills-toolbar">
               <div className="search-wrap" style={{ marginBottom: 0 }}>
                 <span className="search-icon">⌕</span>
@@ -1001,7 +1010,7 @@ ${data}`,
                   value={search} onChange={e => setSearch(e.target.value)} />
                 {search && <button className="search-clear" onClick={() => setSearch('')}>✕</button>}
               </div>
-              <div className="area-filter-chips">
+              <div className="area-filter-chips fifa-tabs">
                 <button className={`filter-chip ${!area ? 'filter-active' : ''}`} onClick={() => setArea(null)}>All Areas ({totalSkills})</button>
                 {PRACTICE_AREAS.map(a => (
                   <button key={a.id}
@@ -1016,37 +1025,76 @@ ${data}`,
 
             {/* Skills List */}
             {!area && !search ? (
-              /* Grid of practice area cards */
-              <div className="area-grid">
-                {PRACTICE_AREAS.map(a => (
-                  <div key={a.id} className="area-card" style={{ '--accent': a.color }}
-                    onClick={() => setArea(a)}>
-                    <span className="area-icon">{a.icon}</span>
-                    <div className="area-name">{a.name}</div>
-                    <div className="area-desc">{a.desc}</div>
-                    <span className="skill-count">{a.skills.length} skills</span>
+              <div>
+                {/* Top 3 Podium */}
+                <div className="podium-row">
+                  {PRACTICE_AREAS.slice(0, 3).map((a, i) => (
+                    <div key={a.id} className={`podium-card podium-${i + 1}`}
+                      style={{ '--accent': a.color }}
+                      onClick={() => { setArea(a); }}>
+                      <div className="podium-rank">#{i + 1}</div>
+                      <span className="podium-icon">{a.icon}</span>
+                      <div className="podium-name">{a.name}</div>
+                      <div className="podium-stats">
+                        <span className="podium-points">{a.skills.length}</span>
+                        <span className="podium-label">skills</span>
+                      </div>
+                      <div className="podium-desc">{a.desc}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Full Rankings Table */}
+                <div className="rankings-table">
+                  <div className="rankings-table-header">
+                    <span className="rt-col-rank">Rank</span>
+                    <span className="rt-col-team">Practice Area</span>
+                    <span className="rt-col-desc">Focus</span>
+                    <span className="rt-col-pts">Skills</span>
+                    <span className="rt-col-action"></span>
                   </div>
-                ))}
+                  {PRACTICE_AREAS.map((a, i) => (
+                    <div key={a.id} className={`rankings-row ${i < 3 ? 'rankings-row-top' : ''}`}
+                      style={{ '--accent': a.color }}
+                      onClick={() => { setArea(a); }}>
+                      <span className="rt-rank">{i + 1}</span>
+                      <div className="rt-team">
+                        <span className="rt-badge">{a.icon}</span>
+                        <span className="rt-name">{a.name}</span>
+                      </div>
+                      <span className="rt-desc">{a.desc}</span>
+                      <span className="rt-points">{a.skills.length}</span>
+                      <button className="btn-gold btn-sm rt-btn" onClick={(e) => {
+                        e.stopPropagation(); setArea(a);
+                      }}>Explore →</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               /* Flat skills list — filtered by area and/or search */
               <div>
                 {area && !search && (
-                  <div className="area-header">
-                    <span style={{ fontSize: 40 }}>{area.icon}</span>
-                    <div>
-                      <h2 style={{ color: 'var(--text-primary)', fontSize: 26 }}>{area.name}</h2>
-                      <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 14 }}>{area.desc}</p>
+                  <div className="area-detail-header" style={{ '--accent': area.color }}>
+                    <button className="btn btn-ghost" onClick={() => { setArea(null); setSkill(null); }} style={{ marginBottom: 16 }}>← Back to Rankings</button>
+                    <div className="adh-inner">
+                      <span className="adh-icon">{area.icon}</span>
+                      <div>
+                        <h2 className="adh-name">{area.name}</h2>
+                        <p className="adh-desc">{area.desc}</p>
+                        <span className="adh-count">{area.skills.length} skills available</span>
+                      </div>
                     </div>
                   </div>
                 )}
                 <div className="skill-panel">
                   {(search ? filtered : (area ? [area] : PRACTICE_AREAS)).map(a =>
                     a.skills
-                      .filter(s => !s.tag || s.tag !== 'setup' || search) // hide setup skills unless searching
-                      .map(s => (
+                      .filter(s => !s.tag || s.tag !== 'setup' || search)
+                      .map((s, si) => (
                         <div key={`${a.id}-${s.id}`} className={`skill-item ${skill?.id === s.id ? 'active' : ''}`}
                           onClick={() => setSkill(s)}>
+                          <span className="skill-rank-num">{si + 1}</span>
                           {(search || !area) && <span className="skill-area-badge" style={{ background: a.color + '22', color: a.color }}>{a.icon} {a.name}</span>}
                           <div className="skill-dot" style={{ background: a.color }} />
                           <div className="skill-info">
