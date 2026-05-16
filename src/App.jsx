@@ -4,6 +4,7 @@ import PptxGenJS from 'pptxgenjs';
 import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './data/practiceAreas.js';
 import { SAMPLE_DOCS, VULN_REPORT } from './data/documents.js';
 import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './data/agentData.js';
+import { COMPARE_PAIRS } from './data/comparePairs.js';
 import './App.css';
 
 const totalSkills = PRACTICE_AREAS.reduce((a, p) => a + p.skills.length, 0);
@@ -449,6 +450,7 @@ export default function App() {
   const [agentResults, setAgentResults] = useState({});
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
+  const [agentMode, setAgentMode] = useState('review');
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
   const agentFileRef = useRef(null);
@@ -1199,84 +1201,113 @@ ${data}`,
                 )}
               </div>
 
+              {/* ─── MODE SELECTOR ─── */}
               <div className="sidebar-section">
-                <div className="sidebar-title">📎 UPLOAD FILES</div>
-                <div className="upload-zone" onClick={() => fileRef.current?.click()}
-                  onDragOver={e => e.preventDefault()} onDrop={onDrop}>
-                  <div style={{ fontSize: 28, marginBottom: 6 }}>📎</div>
-                  <div className="upload-text">Drop files or click to upload</div>
-                  <div className="upload-hint">PDF, DOCX, XLSX, Images, ZIP</div>
+                <div className="mode-tabs">
+                  <button className={`mode-tab ${agentMode === 'review' ? 'mode-active' : ''}`} onClick={() => setAgentMode('review')}>
+                    📄 Skill Review
+                  </button>
+                  <button className={`mode-tab ${agentMode === 'compare' ? 'mode-active' : ''}`} onClick={() => setAgentMode('compare')}>
+                    ⚖ Compare & Comply
+                  </button>
                 </div>
-                <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.zip,.eml"
-                  onChange={e => onFiles(e.target.files)} />
-                {files.length > 0 && (
-                  <div className="file-chips">
-                    {files.map((f, i) => (
-                      <span key={i} className="file-chip">
-                        <strong>{f.ext}</strong> {f.name.length > 16 ? f.name.slice(0, 16) + '…' : f.name}
-                        <span className="file-remove" onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}>✕</span>
-                      </span>
-                    ))}
+
+                {/* MODE 1: SKILL-BASED REVIEW */}
+                {agentMode === 'review' && (
+                  <div className="mode-content">
+                    <p className="mode-desc">Upload a document — AI reviews it against the active skill's baseline and best practices.</p>
+                    <div className="upload-zone" onClick={() => fileRef.current?.click()}
+                      onDragOver={e => e.preventDefault()} onDrop={onDrop}>
+                      <div style={{ fontSize: 24, marginBottom: 4 }}>📎</div>
+                      <div className="upload-text">Drop file or click to upload</div>
+                      <div className="upload-hint">DOCX, TXT, CSV</div>
+                    </div>
+                    <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.zip,.eml"
+                      onChange={e => onFiles(e.target.files)} />
+                    {files.length > 0 && (
+                      <div className="file-chips">
+                        {files.map((f, i) => (
+                          <span key={i} className="file-chip">
+                            <strong>{f.ext}</strong> {f.name.length > 16 ? f.name.slice(0, 16) + '…' : f.name}
+                            <span className="file-remove" onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}>✕</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* ─── COMPARE & COMPLY ─── */}
-              <div className="sidebar-section">
-                <div className="sidebar-title">⚖ COMPARE & COMPLY</div>
-                <p className="sidebar-muted" style={{ fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
-                  Upload a vendor/customer document and your org standard. AI compares clause-by-clause.
-                </p>
+                {/* MODE 2: COMPARE & COMPLY */}
+                {agentMode === 'compare' && (
+                  <div className="mode-content">
+                    <p className="mode-desc">Upload vendor doc + your org standard. AI compares clause-by-clause and highlights deviations.</p>
 
-                {/* Vendor/Customer Doc */}
-                <div className={`compare-upload-box ${vendorDoc?.content ? 'compare-loaded' : ''}`}
-                  onClick={() => vendorFileRef.current?.click()}>
-                  <span className="compare-label">📄 Their Document</span>
-                  {vendorDoc ? (
-                    <div className="compare-file-info">
-                      <span className="compare-file-name">{vendorDoc.name.length > 22 ? vendorDoc.name.slice(0, 22) + '…' : vendorDoc.name}</span>
-                      {vendorDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
-                      <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setVendorDoc(null); }}>✕</span>
+                    {/* Sample Pairs */}
+                    <div className="compare-samples">
+                      <div className="sidebar-title" style={{ fontSize: 10, marginBottom: 6 }}>LOAD SAMPLE PAIR</div>
+                      <div className="sample-pair-chips">
+                        {COMPARE_PAIRS.map(p => (
+                          <button key={p.id} className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '4px 8px' }}
+                            onClick={() => {
+                              setVendorDoc({ name: p.vendor.name, ext: 'TXT', content: p.vendor.content, reading: false });
+                              setOrgDoc({ name: p.org.name, ext: 'TXT', content: p.org.content, reading: false });
+                            }}>
+                            {p.icon} {p.title}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
-                    <span className="compare-placeholder">Click to upload vendor/customer doc</span>
-                  )}
-                </div>
-                <input ref={vendorFileRef} type="file" style={{ display: 'none' }}
-                  accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setVendorDoc); e.target.value = ''; }} />
 
-                {/* Org Standard Doc */}
-                <div className={`compare-upload-box compare-org ${orgDoc?.content ? 'compare-loaded' : ''}`}
-                  onClick={() => orgFileRef.current?.click()} style={{ marginTop: 8 }}>
-                  <span className="compare-label">🏢 Your Org Standard</span>
-                  {orgDoc ? (
-                    <div className="compare-file-info">
-                      <span className="compare-file-name">{orgDoc.name.length > 22 ? orgDoc.name.slice(0, 22) + '…' : orgDoc.name}</span>
-                      {orgDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
-                      <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setOrgDoc(null); }}>✕</span>
+                    {/* Vendor Doc */}
+                    <div className={`compare-upload-box ${vendorDoc?.content ? 'compare-loaded' : ''}`}
+                      onClick={() => vendorFileRef.current?.click()}>
+                      <span className="compare-label">📄 Their Document</span>
+                      {vendorDoc ? (
+                        <div className="compare-file-info">
+                          <span className="compare-file-name">{vendorDoc.name.length > 20 ? vendorDoc.name.slice(0, 20) + '…' : vendorDoc.name}</span>
+                          {vendorDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
+                          <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setVendorDoc(null); }}>✕</span>
+                        </div>
+                      ) : (
+                        <span className="compare-placeholder">Upload vendor/customer document</span>
+                      )}
                     </div>
-                  ) : (
-                    <span className="compare-placeholder">Click to upload your org standard/playbook</span>
-                  )}
-                </div>
-                <input ref={orgFileRef} type="file" style={{ display: 'none' }}
-                  accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setOrgDoc); e.target.value = ''; }} />
+                    <input ref={vendorFileRef} type="file" style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setVendorDoc); e.target.value = ''; }} />
 
-                {/* Compare Button */}
-                <button className="btn btn-gold compare-btn"
-                  disabled={!vendorDoc?.content || !orgDoc?.content || vendorDoc.reading || orgDoc.reading || loading}
-                  onClick={runComparison}>
-                  {loading ? '⏳ Comparing…' : '⚖ Compare Documents'}
-                </button>
+                    {/* Org Doc */}
+                    <div className={`compare-upload-box compare-org ${orgDoc?.content ? 'compare-loaded' : ''}`}
+                      onClick={() => orgFileRef.current?.click()} style={{ marginTop: 8 }}>
+                      <span className="compare-label">🏢 Your Org Standard</span>
+                      {orgDoc ? (
+                        <div className="compare-file-info">
+                          <span className="compare-file-name">{orgDoc.name.length > 20 ? orgDoc.name.slice(0, 20) + '…' : orgDoc.name}</span>
+                          {orgDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
+                          <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setOrgDoc(null); }}>✕</span>
+                        </div>
+                      ) : (
+                        <span className="compare-placeholder">Upload your org standard/playbook</span>
+                      )}
+                    </div>
+                    <input ref={orgFileRef} type="file" style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setOrgDoc); e.target.value = ''; }} />
+
+                    <button className="btn btn-gold compare-btn"
+                      disabled={!vendorDoc?.content || !orgDoc?.content || vendorDoc.reading || orgDoc.reading || loading}
+                      onClick={runComparison}>
+                      {loading ? '⏳ Comparing…' : '⚖ Compare Documents'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="sidebar-section">
                 <div className="sidebar-title">EXPORT SESSION</div>
                 <div className="export-btns">
-                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'html')} disabled={!msgs.length}>📄 HTML (Word-ready)</button>
-                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'txt')} disabled={!msgs.length}>📝 TXT (PDF-ready)</button>
-                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'csv')} disabled={!msgs.length}>📊 CSV (Excel)</button>
+                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'html')} disabled={!msgs.length}>📄 HTML</button>
+                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'txt')} disabled={!msgs.length}>📝 TXT</button>
+                  <button className="btn btn-ghost" onClick={() => exportChat(msgs, 'csv')} disabled={!msgs.length}>📊 CSV</button>
                 </div>
               </div>
             </aside>
