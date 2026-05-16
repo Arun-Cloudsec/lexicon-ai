@@ -142,6 +142,6 @@ The codebase vulnerability scan found 9 passes, 3 low/medium warnings, and 0 cri
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE)
+Proprietary — Internal use only
 
 Built on [Claude for Legal](https://github.com/anthropics/claude-for-legal) by Anthropic.

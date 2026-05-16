@@ -170,6 +170,6 @@ export const VULN_REPORT = [
   { severity: "medium", title: "MCP URLs Without Certificate Pinning", desc: ".mcp.json files contain HTTPS endpoints without certificate pinning at the client level. Consider adding TLS verification policies.", status: "warn" },
   { severity: "info", title: "Schema Validation on Subagent Outputs", desc: "validate.py uses jsonschema to validate managed-agent worker output against defined schemas. Proper error handling.", status: "pass" },
   { severity: "info", title: "Safe YAML Parsing", desc: "All YAML parsing uses yaml.safe_load — no unsafe deserialization detected. No pickle or eval usage.", status: "pass" },
-  { severity: "info", title: "Apache-2.0 License Clean", desc: "All source files carry Apache-2.0 headers. No GPL or copyleft dependencies detected.", status: "pass" },
+  { severity: "info", title: "License Compliance Clean", desc: "No copyleft or restrictive license dependencies detected in the codebase.", status: "pass" },
   { severity: "info", title: "No Hardcoded Secrets", desc: "API keys read from environment variables. No credentials or secrets hardcoded in any source file.", status: "pass" },
 ];

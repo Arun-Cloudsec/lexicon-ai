@@ -868,62 +868,119 @@ ${data}`,
         {/* ══════════════════ DASHBOARD ══════════════════ */}
         {tab === 'dashboard' && (
           <div className={`fade-wrapper ${ready ? 'visible' : ''}`}>
-            <section className="hero-card">
-              <div className="hero-glow" />
-              <div className="hero-content">
-                <h1 className="hero-title">Legal Agent Command Center</h1>
-                <p className="hero-subtitle">
-                  Powered by Claude for Legal — {PRACTICE_AREAS.length} practice areas, {totalSkills} AI skills,
-                  {MANAGED_AGENTS.length} managed agents, and {CONNECTORS.length}+ MCP connectors including
-                  Ironclad, DocuSign, iManage, Everlaw, and CourtListener.
-                  Every output is a draft for attorney review.
+
+            {/* ─── HERO BANNER ─── */}
+            <section className="hero-banner">
+              <div className="hero-mesh" />
+              <div className="hero-orb hero-orb-1" />
+              <div className="hero-orb hero-orb-2" />
+              <div className="hero-orb hero-orb-3" />
+              <div className="hero-inner">
+                <div className="hero-badge">⚖ POWERED BY CLAUDE FOR LEGAL</div>
+                <h1 className="hero-headline">Legal Intelligence<br/><span className="hero-gradient-text">Command Center</span></h1>
+                <p className="hero-tagline">
+                  {totalSkills} AI skills across {PRACTICE_AREAS.length} practice areas. Structured findings with accept/reject wording.
+                  Compare & Comply dual-document analysis. One-click exports to PDF, Word, PPT, and Excel.
                 </p>
-                <div className="stats-row">
-                  {[
-                    { n: PRACTICE_AREAS.length, l: 'Practice Areas' },
-                    { n: totalSkills, l: 'AI Skills' },
-                    { n: MANAGED_AGENTS.length, l: 'Managed Agents' },
-                    { n: `${CONNECTORS.length}+`, l: 'MCP Connectors' },
-                    { n: SAMPLE_DOCS.length, l: 'Sample Docs' },
-                    { n: VULN_REPORT.length, l: 'Security Checks' },
-                  ].map((s, i) => (
-                    <div key={i} className={`stat-card animate-in stagger-${i + 1}`}>
-                      <div className="stat-num">{s.n}</div>
-                      <div className="stat-label">{s.l}</div>
-                    </div>
-                  ))}
+                <div className="hero-actions">
+                  <button className="btn-hero btn-hero-primary" onClick={() => setTab('skills')}>
+                    Explore Skills →
+                  </button>
+                  <button className="btn-hero btn-hero-secondary" onClick={() => setTab('agent')}>
+                    Launch AI Agent
+                  </button>
                 </div>
               </div>
-            </section>
 
-            <h2 className="section-title">PRACTICE AREAS</h2>
-            <div className="area-grid">
-              {PRACTICE_AREAS.map((a, i) => (
-                <div key={a.id} className={`area-card animate-in stagger-${Math.min(i + 1, 12)}`}
-                  style={{ '--accent': a.color }}
-                  onClick={() => { setTab('skills'); setArea(a); }}>
-                  <span className="area-icon">{a.icon}</span>
-                  <div className="area-name">{a.name}</div>
-                  <div className="area-desc">{a.desc}</div>
-                  <span className="skill-count">{a.skills.length} skills</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="managed-agents-section">
-              <h2 className="section-title">MANAGED AGENTS</h2>
-              <div className="agents-row">
-                {MANAGED_AGENTS.map((ag, i) => (
-                  <div key={i} className="agent-chip">
-                    <span className="agent-icon">⟐</span>
-                    <div>
-                      <div className="agent-name">{ag.name}</div>
-                      <div className="agent-desc">{ag.desc}</div>
-                    </div>
+              {/* Animated Stats */}
+              <div className="hero-stats-bar">
+                {[
+                  { n: PRACTICE_AREAS.length, l: 'Practice Areas', icon: '📋', color: '#C9A84C' },
+                  { n: totalSkills, l: 'AI Skills', icon: '⚡', color: '#5B9BD5' },
+                  { n: MANAGED_AGENTS.length, l: 'Managed Agents', icon: '🤖', color: '#4ECDC4' },
+                  { n: `${CONNECTORS.length}+`, l: 'MCP Connectors', icon: '🔗', color: '#B07CC6' },
+                  { n: SAMPLE_DOCS.length, l: 'Sample Docs', icon: '📄', color: '#6BAF8D' },
+                  { n: VULN_REPORT.length, l: 'Security Checks', icon: '🛡️', color: '#D4726A' },
+                ].map((s, i) => (
+                  <div key={i} className={`hero-stat animate-in stagger-${i + 1}`}>
+                    <span className="hero-stat-icon" style={{ '--glow': s.color }}>{s.icon}</span>
+                    <div className="hero-stat-num" style={{ color: s.color }}>{s.n}</div>
+                    <div className="hero-stat-label">{s.l}</div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
+
+            {/* ─── PRACTICE AREAS ─── */}
+            <section className="section-block">
+              <div className="section-header">
+                <h2 className="section-heading">Practice Areas</h2>
+                <p className="section-sub">Click any area to explore its skills and launch the AI Agent</p>
+              </div>
+              <div className="area-grid-v2">
+                {PRACTICE_AREAS.map((a, i) => (
+                  <div key={a.id} className={`area-card-v2 animate-in stagger-${Math.min(i + 1, 12)}`}
+                    style={{ '--accent': a.color, '--accent-glow': a.color + '40' }}
+                    onClick={() => { setTab('skills'); setArea(a); }}>
+                    <div className="acard-glow" />
+                    <div className="acard-content">
+                      <div className="acard-top">
+                        <span className="acard-icon">{a.icon}</span>
+                        <span className="acard-count">{a.skills.length}</span>
+                      </div>
+                      <div className="acard-name">{a.name}</div>
+                      <div className="acard-desc">{a.desc}</div>
+                    </div>
+                    <div className="acard-hover-bar" />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ─── FEATURES SHOWCASE ─── */}
+            <section className="section-block">
+              <div className="section-header">
+                <h2 className="section-heading">Platform Capabilities</h2>
+                <p className="section-sub">Enterprise-grade tools for every stage of legal analysis</p>
+              </div>
+              <div className="features-grid">
+                {[
+                  { icon: '📝', title: 'Structured Findings', desc: 'Every finding numbered F-001 with section reference, exact current wording, and recommended replacement language', color: '#C9A84C' },
+                  { icon: '⚖', title: 'Compare & Comply', desc: 'Upload vendor doc + org standard — AI compares clause-by-clause and highlights every deviation', color: '#D4726A' },
+                  { icon: '🤖', title: 'Managed Agents', desc: 'Autonomous agents scan contracts, regulatory feeds, and launches — deliver structured reports', color: '#4ECDC4' },
+                  { icon: '📊', title: 'One-Click Export', desc: 'PDF with title page, Word for redlining, PowerPoint for leadership, Excel for tracking', color: '#5B9BD5' },
+                  { icon: '🎯', title: 'Risk Report Cards', desc: 'Color-coded HIGH/MEDIUM/LOW with Key Actions table and executive risk summary', color: '#B07CC6' },
+                  { icon: '🔗', title: `${CONNECTORS.length}+ Integrations`, desc: 'Ironclad, DocuSign, iManage, Everlaw, CourtListener, Slack, Jira, and more', color: '#6BAF8D' },
+                ].map((f, i) => (
+                  <div key={i} className="feature-card" style={{ '--fcolor': f.color }}>
+                    <div className="feature-icon-wrap">
+                      <span className="feature-icon">{f.icon}</span>
+                    </div>
+                    <div className="feature-title">{f.title}</div>
+                    <div className="feature-desc">{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ─── MANAGED AGENTS ─── */}
+            <section className="section-block">
+              <div className="section-header">
+                <h2 className="section-heading">Managed Agents</h2>
+                <p className="section-sub">Autonomous AI agents running in the background</p>
+              </div>
+              <div className="agents-grid-v2">
+                {MANAGED_AGENTS.map((ag, i) => (
+                  <div key={i} className="agent-card-v2" onClick={() => setTab('agents')}>
+                    <div className="agent-pulse" />
+                    <span className="agent-icon-v2">⟐</span>
+                    <div className="agent-name-v2">{ag.name}</div>
+                    <div className="agent-desc-v2">{ag.desc}</div>
+                    <span className="agent-status-v2">● Live</span>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div className="disclaimer">
               <strong>⚠ Important Notice:</strong> Every output from this platform is a draft for attorney review — not legal advice,
@@ -1727,9 +1784,7 @@ ${data}`,
           <span className="footer-divider">|</span>
           <span>Powered by Claude for Legal</span>
           <span className="footer-divider">|</span>
-          <span>Apache-2.0 License</span>
-          <span className="footer-divider">|</span>
-          <a href="https://github.com/anthropics/claude-for-legal" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+          <a href="https://github.com/Arun-Cloudsec/lexicon-ai" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
         </div>
       </footer>
     </div>
