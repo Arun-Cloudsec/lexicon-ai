@@ -759,10 +759,16 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
 
                     {m.role === 'assistant' && isReport(m.text) ? (
                       <div className="report-card">
-                        {/* Report Header */}
+                        {/* Report Header with Download Buttons */}
                         <div className="report-header">
                           <span className="report-icon">⚖</span>
                           <span className="report-title">{(m.text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1]}</span>
+                          <div className="report-header-actions">
+                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'pdf')}>🔍 Full Report</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'csv')}>📈 Excel</button>
+                          </div>
                         </div>
 
                         {/* Risk summary counts */}
@@ -805,18 +811,16 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
                           </div>
                         )}
 
-                        {/* Download buttons */}
-                        <div className="report-downloads">
-                          <button className="btn btn-gold" style={{ padding: '10px 22px' }} onClick={() => exportReport(m.text, 'pdf')}>🔍 View Full Report</button>
-                          <span className="dl-divider">|</span>
-                          <span className="dl-label">Export:</span>
-                          <button className="btn btn-ghost btn-sm" onClick={() => exportReport(m.text, 'pdf')}>📄 PDF</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => exportReport(m.text, 'csv')}>📈 Excel</button>
+                        {/* Bottom export bar */}
+                        <div className="report-bottom-bar">
+                          <span className="report-disclaimer-inline">Draft for attorney review — not legal advice.</span>
+                          <div className="report-bottom-actions">
+                            <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'pdf')}>🔍 View Full Report</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
+                            <button className="btn-export" onClick={() => exportReport(m.text, 'csv')}>📈 Excel</button>
+                          </div>
                         </div>
-
-                        <div className="report-disclaimer">Draft for attorney review — not legal advice.</div>
                       </div>
                     ) : (
                       <div className="msg-text">{m.text}</div>
