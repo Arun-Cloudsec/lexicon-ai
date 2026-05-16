@@ -163,6 +163,14 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 .bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:700;color:white;min-width:fit-content}
 .summary-box{background:#F8F6F0;padding:20px;border-radius:10px;border:1px solid #E5E1D8;font-size:14px;line-height:1.7;margin-bottom:20px}
 .actions-box{background:#EFF6FF;padding:20px;border-radius:10px;border:1px solid #BFDBFE;font-size:14px;line-height:1.7}
+.ka-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+.ka-table th{background:#1B2A4A;color:white;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.8px}
+.ka-table td{padding:10px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.ka-table tr.ka-high{border-left:4px solid #DC2626}
+.ka-table tr.ka-med{border-left:4px solid #D97706}
+.ka-table tr.ka-low{border-left:4px solid #059669}
+.sev-pill{display:inline-block;padding:2px 10px;border-radius:8px;font-size:10px;font-weight:700;color:white}
+.sev-high{background:#DC2626}.sev-med{background:#D97706}.sev-low{background:#059669}
 
 /* Findings Pages */
 .findings{padding:48px;max-width:900px;margin:0 auto}
@@ -215,7 +223,10 @@ ${counts.low > 0 ? `<div class="bar-row"><div class="bar-label">Low Risk</div><d
 ${counts.rec > 0 ? `<div class="bar-row"><div class="bar-label">Recommendations</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(counts.rec/totalFindings*100,15)}%;background:#2563EB">${counts.rec}</div></div></div>` : ''}
 </div>
 ${summary ? `<h3 style="font-size:16px;color:#1B2A4A;margin-bottom:8px">Risk Summary</h3><div class="summary-box">${summary}</div>` : ''}
-${actions ? `<h3 style="font-size:16px;color:#1B2A4A;margin-bottom:8px">Key Actions Required</h3><div class="actions-box">${actions.replace(/\n/g, '<br>')}</div>` : ''}
+${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3 style="font-size:16px;color:#1B2A4A;margin:16px 0 8px">Key Actions Required</h3>
+<table class="ka-table"><tr><th>Action #</th><th>Risk</th><th>Reference</th><th>Details</th><th>Recommendation</th></tr>
+${kas.map(ka => `<tr class="ka-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'med' : 'low'}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${ka.num}</td><td><span class="sev-pill sev-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'med' : 'low'}">${ka.severity}</span></td><td style="color:#5B9BD5">${ka.reference}</td><td>${ka.issue}</td><td style="font-weight:500">${ka.recommendation}</td></tr>`).join('')}
+</table>` : ''; })()}
 </div>
 
 <!-- PAGE 3+: DETAILED FINDINGS -->
@@ -226,16 +237,17 @@ ${items.map((item, idx) => `<div class="item item-${item.type}"><div style="disp
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
-    const w = window.open('about:blank', '_blank');
-    if (w) {
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      w.location.href = url;
-      w.addEventListener('load', () => { setTimeout(() => { try { w.print(); } catch(e) {} }, 500); });
+    // Reliable print: write to new window, then trigger print
+    const printWin = window.open('', '_blank', 'width=900,height=700');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(html);
+      printWin.document.close();
+      printWin.onload = function() { setTimeout(function() { printWin.focus(); printWin.print(); }, 400); };
+      // Fallback if onload doesn't fire
+      setTimeout(function() { try { printWin.focus(); printWin.print(); } catch(e) {} }, 1500);
     } else {
-      // Fallback: download as HTML if popup blocked
-      downloadBlob(new Blob([html], { type: 'text/html' }), `${fname}-${ts}.html`);
-      alert('Pop-up was blocked. The report has been downloaded as HTML instead. Open it and press Ctrl+P to save as PDF.');
+      downloadBlob(new Blob([html], { type: 'text/html' }), fname + '-' + ts + '.html');
     }
   }
 
@@ -275,7 +287,7 @@ th{background:#1B2A4A;color:white;font-weight:700;text-align:left}
 <td style="color:#2563EB">${counts.rec}<br><span class="dash-label">Recommendations</span></td></tr>
 </table>
 ${summary ? `<h3>Risk Summary</h3><p style="background:#F8F6F0;padding:16px;border-radius:6px;border:1px solid #E5E1D8">${summary}</p>` : ''}
-${actions ? `<h3>Key Actions</h3><p style="background:#EFF6FF;padding:16px;border-radius:6px;border:1px solid #BFDBFE">${actions.replace(/\n/g, '<br>')}</p>` : ''}
+${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3>Key Actions Required</h3><table><tr><th>Action #</th><th>Risk</th><th>Reference</th><th>Details</th><th>Recommendation</th></tr>${kas.map(ka => '<tr><td style="font-weight:700;color:#C9A84C">' + ka.num + '</td><td><span class="badge" style="background:' + (ka.severity.toLowerCase().includes('high') ? '#DC2626' : ka.severity.toLowerCase().includes('medium') ? '#D97706' : '#059669') + '">' + ka.severity + '</span></td><td style="color:#5B9BD5">' + ka.reference + '</td><td>' + ka.issue + '</td><td>' + ka.recommendation + '</td></tr>').join('')}</table>` : (actions ? '<h3>Key Actions</h3><p style="background:#EFF6FF;padding:16px;border-radius:6px">' + actions.replace(/\n/g, '<br>') + '</p>' : ''); })()}
 <br style="page-break-before:always">
 <h2>Detailed Findings (${totalFindings})</h2>
 <table>
