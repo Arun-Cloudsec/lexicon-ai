@@ -135,10 +135,10 @@ function exportReport(text, format) {
 <style>
 @media print { .no-print{display:none} .page-break{page-break-before:always} body{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
+body{font-family:Calibri,'Segoe UI',sans-serif;color:#0E2A52;line-height:1.5}
 
 /* Title Page */
-.title-page{height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(160deg,#0B0E18 0%,#16213e 50%,#1B2A4A 100%);color:white;text-align:center;padding:60px}
+.title-page{height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(160deg,#0B0E18 0%,#16213e 50%,#0E2A52 100%);color:white;text-align:center;padding:60px}
 .title-page h1{font-size:36px;font-weight:300;letter-spacing:2px;margin-bottom:8px;color:#C9A84C}
 .title-page h2{font-size:28px;font-weight:700;margin:16px 0;max-width:700px}
 .title-page .meta-row{display:flex;gap:32px;margin-top:28px;font-size:14px;color:#94a3b8}
@@ -148,7 +148,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 
 /* Dashboard Page */
 .dashboard{padding:48px;max-width:900px;margin:0 auto}
-.dashboard h2{font-size:22px;color:#1B2A4A;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:24px}
+.dashboard h2{font-size:22px;color:#0E2A52;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:24px}
 .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
 .dash-card{padding:20px;border-radius:10px;text-align:center;border:1px solid #e2e8f0}
 .dash-card .num{font-size:36px;font-weight:700}
@@ -165,7 +165,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 .summary-box{background:#F8F6F0;padding:20px;border-radius:10px;border:1px solid #E5E1D8;font-size:14px;line-height:1.7;margin-bottom:20px}
 .actions-box{background:#EFF6FF;padding:20px;border-radius:10px;border:1px solid #BFDBFE;font-size:14px;line-height:1.7}
 .ka-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
-.ka-table th{background:#1B2A4A;color:white;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.8px}
+.ka-table th{background:#0E2A52;color:white;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.8px}
 .ka-table td{padding:10px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}
 .ka-table tr.ka-high{border-left:4px solid #DC2626}
 .ka-table tr.ka-med{border-left:4px solid #D97706}
@@ -175,7 +175,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 
 /* Findings Pages */
 .findings{padding:48px;max-width:900px;margin:0 auto}
-.findings h2{font-size:22px;color:#1B2A4A;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:20px}
+.findings h2{font-size:22px;color:#0E2A52;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:20px}
 .item{padding:16px 20px;margin:12px 0;border-radius:10px;border-left:5px solid;page-break-inside:avoid}
 .item-high{border-color:#DC2626;background:#FEF2F2}
 .item-medium{border-color:#D97706;background:#FFFBEB}
@@ -183,11 +183,11 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 .item-rec{border-color:#2563EB;background:#EFF6FF}
 .item-finding{border-color:#6B7280;background:#F9FAFB}
 .badge{display:inline-block;padding:3px 12px;border-radius:10px;font-size:10px;font-weight:700;color:white;letter-spacing:1px;text-transform:uppercase}
-.item h3{font-size:15px;margin:8px 0 6px;color:#1B2A4A}
+.item h3{font-size:15px;margin:8px 0 6px;color:#0E2A52}
 .item p{font-size:13px;color:#334155;line-height:1.65}
 .footer{text-align:center;font-size:11px;color:#94a3b8;padding:24px;border-top:2px solid #C9A84C;margin-top:40px}
-.print-bar{background:#1B2A4A;color:white;padding:12px 24px;display:flex;gap:12px;align-items:center}
-.print-bar button{background:#C9A84C;color:#1B2A4A;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px}
+.print-bar{background:#0E2A52;color:white;padding:12px 24px;display:flex;gap:12px;align-items:center}
+.print-bar button{background:#C9A84C;color:#0E2A52;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px}
 </style></head><body>
 <div class="print-bar no-print"><span style="font-weight:700">⚖ Lexicon AI Report</span><button onclick="window.print()">🖨️ Print / Save as PDF</button><span style="color:#94a3b8;font-size:13px;margin-left:auto">Ctrl+P → Save as PDF for best results</span></div>
 
@@ -216,15 +216,15 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#1B2A4A;line-height:1.5}
 <div class="dash-card dash-card-low"><div class="num">${counts.low}</div><div class="lbl">Low Risk</div></div>
 <div class="dash-card dash-card-rec"><div class="num">${counts.rec}</div><div class="lbl">Recommendations</div></div>
 </div>
-<h3 style="font-size:16px;color:#1B2A4A;margin-bottom:12px">Risk Distribution</h3>
+<h3 style="font-size:16px;color:#0E2A52;margin-bottom:12px">Risk Distribution</h3>
 <div class="bar-chart">
 ${counts.high > 0 ? `<div class="bar-row"><div class="bar-label">High Risk</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(counts.high/totalFindings*100,15)}%;background:#DC2626">${counts.high}</div></div></div>` : ''}
 ${counts.medium > 0 ? `<div class="bar-row"><div class="bar-label">Medium Risk</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(counts.medium/totalFindings*100,15)}%;background:#D97706">${counts.medium}</div></div></div>` : ''}
 ${counts.low > 0 ? `<div class="bar-row"><div class="bar-label">Low Risk</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(counts.low/totalFindings*100,15)}%;background:#059669">${counts.low}</div></div></div>` : ''}
 ${counts.rec > 0 ? `<div class="bar-row"><div class="bar-label">Recommendations</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(counts.rec/totalFindings*100,15)}%;background:#2563EB">${counts.rec}</div></div></div>` : ''}
 </div>
-${summary ? `<h3 style="font-size:16px;color:#1B2A4A;margin-bottom:8px">Risk Summary</h3><div class="summary-box">${summary}</div>` : ''}
-${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3 style="font-size:16px;color:#1B2A4A;margin:16px 0 8px">Key Actions Required</h3>
+${summary ? `<h3 style="font-size:16px;color:#0E2A52;margin-bottom:8px">Risk Summary</h3><div class="summary-box">${summary}</div>` : ''}
+${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3 style="font-size:16px;color:#0E2A52;margin:16px 0 8px">Key Actions Required</h3>
 <table class="ka-table"><tr><th>Action #</th><th>Risk</th><th>Reference</th><th>Details</th><th>Recommendation</th></tr>
 ${kas.map(ka => `<tr class="ka-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'med' : 'low'}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${ka.num}</td><td><span class="sev-pill sev-${ka.severity.toLowerCase().includes('high') ? 'high' : ka.severity.toLowerCase().includes('medium') ? 'med' : 'low'}">${ka.severity}</span></td><td style="color:#5B9BD5">${ka.reference}</td><td>${ka.issue}</td><td style="font-weight:500">${ka.recommendation}</td></tr>`).join('')}
 </table>` : ''; })()}
@@ -260,12 +260,12 @@ ${items.map((item, idx) => `<div class="item item-${item.type}"><div style="disp
 <head><meta charset="utf-8"><meta name="ProgId" content="Word.Document">
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
 <style>
-body{font-family:Calibri,sans-serif;color:#1B2A4A;margin:40px}
-h1{font-size:28px;color:#1B2A4A;border-bottom:3px solid #C9A84C;padding-bottom:10px}
-h2{font-size:20px;color:#1B2A4A;margin-top:24px;border-bottom:2px solid #E5E1D8;padding-bottom:6px}
+body{font-family:Calibri,sans-serif;color:#0E2A52;margin:40px}
+h1{font-size:28px;color:#0E2A52;border-bottom:3px solid #C9A84C;padding-bottom:10px}
+h2{font-size:20px;color:#0E2A52;margin-top:24px;border-bottom:2px solid #E5E1D8;padding-bottom:6px}
 table{border-collapse:collapse;width:100%;margin:16px 0}
 td,th{border:1px solid #ddd;padding:10px 14px;font-size:13px}
-th{background:#1B2A4A;color:white;font-weight:700;text-align:left}
+th{background:#0E2A52;color:white;font-weight:700;text-align:left}
 .high{background:#FEF2F2;border-left:4px solid #DC2626}
 .medium{background:#FFFBEB;border-left:4px solid #D97706}
 .low{background:#ECFDF5;border-left:4px solid #059669}
