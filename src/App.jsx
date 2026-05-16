@@ -226,9 +226,17 @@ ${items.map((item, idx) => `<div class="item item-${item.type}"><div style="disp
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
-    const w = window.open('', '_blank');
-    w.document.write(html);
-    w.document.close();
+    const w = window.open('about:blank', '_blank');
+    if (w) {
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      w.location.href = url;
+      w.addEventListener('load', () => { setTimeout(() => { try { w.print(); } catch(e) {} }, 500); });
+    } else {
+      // Fallback: download as HTML if popup blocked
+      downloadBlob(new Blob([html], { type: 'text/html' }), `${fname}-${ts}.html`);
+      alert('Pop-up was blocked. The report has been downloaded as HTML instead. Open it and press Ctrl+P to save as PDF.');
+    }
   }
 
   // ═══ WORD — .doc HTML that opens natively in Word ═══
@@ -818,16 +826,32 @@ ${data}`,
         {/* ══════════════════ SKILLS BROWSER ══════════════════ */}
         {tab === 'skills' && (
           <div className="fade-wrapper visible">
-            <div className="search-wrap">
-              <span className="search-icon">⌕</span>
-              <input className="search-input" placeholder="Search across all practice areas and skills…"
-                value={search} onChange={e => setSearch(e.target.value)} />
-              {search && <button className="search-clear" onClick={() => setSearch('')}>✕</button>}
+            {/* Search + Filter Bar */}
+            <div className="skills-toolbar">
+              <div className="search-wrap" style={{ marginBottom: 0 }}>
+                <span className="search-icon">⌕</span>
+                <input className="search-input" style={{ marginBottom: 0 }} placeholder="Search across all practice areas and skills…"
+                  value={search} onChange={e => setSearch(e.target.value)} />
+                {search && <button className="search-clear" onClick={() => setSearch('')}>✕</button>}
+              </div>
+              <div className="area-filter-chips">
+                <button className={`filter-chip ${!area ? 'filter-active' : ''}`} onClick={() => setArea(null)}>All Areas ({totalSkills})</button>
+                {PRACTICE_AREAS.map(a => (
+                  <button key={a.id}
+                    className={`filter-chip ${area?.id === a.id ? 'filter-active' : ''}`}
+                    style={{ '--chip-color': a.color }}
+                    onClick={() => setArea(area?.id === a.id ? null : a)}>
+                    {a.icon} {a.name} ({a.skills.length})
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {!area ? (
+            {/* Skills List */}
+            {!area && !search ? (
+              /* Grid of practice area cards */
               <div className="area-grid">
-                {filtered.map(a => (
+                {PRACTICE_AREAS.map(a => (
                   <div key={a.id} className="area-card" style={{ '--accent': a.color }}
                     onClick={() => setArea(a)}>
                     <span className="area-icon">{a.icon}</span>
@@ -838,30 +862,42 @@ ${data}`,
                 ))}
               </div>
             ) : (
+              /* Flat skills list — filtered by area and/or search */
               <div>
-                <button className="btn btn-ghost" onClick={() => { setArea(null); setSkill(null); }}>← All Practice Areas</button>
-                <div className="area-header">
-                  <span style={{ fontSize: 40 }}>{area.icon}</span>
-                  <div>
-                    <h2 style={{ color: 'var(--text-primary)', fontSize: 26 }}>{area.name}</h2>
-                    <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 14 }}>{area.desc}</p>
-                  </div>
-                </div>
-                <div className="skill-panel">
-                  {area.skills.map(s => (
-                    <div key={s.id} className={`skill-item ${skill?.id === s.id ? 'active' : ''}`}
-                      onClick={() => setSkill(s)}>
-                      <div className="skill-dot" style={{ background: area.color }} />
-                      <div className="skill-info">
-                        <div className="skill-name">{s.name}</div>
-                        <div className="skill-desc">{s.desc}</div>
-                      </div>
-                      <button className="btn btn-gold btn-sm" onClick={(e) => {
-                        e.stopPropagation(); setSkill(s); setTab('agent');
-                        setInput(`Use the "${s.name}" skill: `);
-                      }}>Launch →</button>
+                {area && !search && (
+                  <div className="area-header">
+                    <span style={{ fontSize: 40 }}>{area.icon}</span>
+                    <div>
+                      <h2 style={{ color: 'var(--text-primary)', fontSize: 26 }}>{area.name}</h2>
+                      <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 14 }}>{area.desc}</p>
                     </div>
-                  ))}
+                  </div>
+                )}
+                <div className="skill-panel">
+                  {(search ? filtered : (area ? [area] : PRACTICE_AREAS)).map(a =>
+                    a.skills
+                      .filter(s => !s.tag || s.tag !== 'setup' || search) // hide setup skills unless searching
+                      .map(s => (
+                        <div key={`${a.id}-${s.id}`} className={`skill-item ${skill?.id === s.id ? 'active' : ''}`}
+                          onClick={() => setSkill(s)}>
+                          {(search || !area) && <span className="skill-area-badge" style={{ background: a.color + '22', color: a.color }}>{a.icon} {a.name}</span>}
+                          <div className="skill-dot" style={{ background: a.color }} />
+                          <div className="skill-info">
+                            <div className="skill-name">{s.name} {s.tag === 'setup' && <span className="skill-setup-tag">SETUP</span>}</div>
+                            <div className="skill-desc">{s.desc}</div>
+                          </div>
+                          <button className="btn btn-gold btn-sm" onClick={(e) => {
+                            e.stopPropagation(); setSkill(s); setTab('agent');
+                            setInput(`Use the "${s.name}" skill: `);
+                          }}>Launch →</button>
+                        </div>
+                      ))
+                  )}
+                  {search && filtered.reduce((a, p) => a + p.skills.length, 0) === 0 && (
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-dim)', fontFamily: 'var(--font-body)' }}>
+                      No skills match "{search}". Try a different search term.
+                    </div>
+                  )}
                 </div>
               </div>
             )}

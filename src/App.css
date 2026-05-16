@@ -442,3 +442,12 @@
 .agent-upload-btn { cursor: pointer; }
 .agent-results { border-top: 1px solid rgba(201,168,76,0.1); }
 .agent-results-meta { display: flex; gap: 20px; padding: 12px 24px; font-size: 11px; font-family: var(--font-body); color: var(--text-dim); background: rgba(201,168,76,0.03); }
+
+/* ═══ ENHANCED SKILLS BROWSER ═══ */
+.skills-toolbar { margin-bottom: 20px; }
+.area-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-bottom: 4px; overflow-x: auto; }
+.filter-chip { padding: 6px 14px; font-size: 12px; font-family: var(--font-body); font-weight: 500; border-radius: 20px; border: 1px solid rgba(201,168,76,0.12); background: var(--bg-card); color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+.filter-chip:hover { border-color: var(--chip-color, var(--gold)); color: var(--text-body); background: rgba(201,168,76,0.06); }
+.filter-active { background: var(--gold) !important; color: var(--bg-deep) !important; border-color: var(--gold) !important; font-weight: 700; }
+.skill-area-badge { font-size: 10px; font-family: var(--font-body); font-weight: 600; padding: 3px 10px; border-radius: 10px; white-space: nowrap; letter-spacing: 0.3px; flex-shrink: 0; }
+.skill-setup-tag { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(91,155,213,0.15); color: #5B9BD5; margin-left: 6px; letter-spacing: 0.5px; vertical-align: middle; }
