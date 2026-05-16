@@ -433,9 +433,13 @@ export default function App() {
   const [authError, setAuthError] = useState(false);
   const [agentRunning, setAgentRunning] = useState(null);
   const [agentResults, setAgentResults] = useState({});
+  const [vendorDoc, setVendorDoc] = useState(null);
+  const [orgDoc, setOrgDoc] = useState(null);
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
   const agentFileRef = useRef(null);
+  const vendorFileRef = useRef(null);
+  const orgFileRef = useRef(null);
 
   useEffect(() => { setTimeout(() => setReady(true), 80); }, []);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
@@ -576,6 +580,96 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
   }, []);
 
   const onDrop = useCallback((e) => { e.preventDefault(); onFiles(e.dataTransfer.files); }, [onFiles]);
+
+  /* ─── DOCUMENT COMPARISON READER ─── */
+  const readDocFile = (file, setter) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    setter({ name: file.name, ext: ext.toUpperCase(), content: null, reading: true });
+
+    if (ext === 'docx' || ext === 'doc') {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+          setter({ name: file.name, ext: ext.toUpperCase(), content: result.value?.slice(0, 50000) || '[Empty document]', reading: false });
+        } catch (err) {
+          setter({ name: file.name, ext: ext.toUpperCase(), content: '[Failed to extract text]', reading: false });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => setter({ name: file.name, ext: ext.toUpperCase(), content: e.target.result?.slice(0, 50000), reading: false });
+      reader.onerror = () => setter({ name: file.name, ext: ext.toUpperCase(), content: '[Failed to read file]', reading: false });
+      reader.readAsText(file);
+    }
+  };
+
+  const runComparison = async () => {
+    if (!vendorDoc?.content || !orgDoc?.content) return;
+    if (vendorDoc.reading || orgDoc.reading) return;
+
+    const userMsg = { role: 'user', text: `📋 Compare & Comply: "${vendorDoc.name}" vs "${orgDoc.name}"`, files: [vendorDoc.name, orgDoc.name], time: new Date() };
+    setMsgs(prev => [...prev, userMsg]);
+    setLoading(true);
+
+    const compareSys = `You are a senior legal AI assistant performing a Document Comparison & Compliance Review.
+
+You are comparing a VENDOR/CUSTOMER DOCUMENT against the ORGANIZATION'S STANDARD/PLAYBOOK.
+
+RULES:
+1. Go clause by clause through the vendor document
+2. Compare each clause against the org standard
+3. Identify: missing clauses, non-compliant language, weaker protections, missing definitions, unfavorable terms
+4. For each finding, provide the EXACT current wording and your RECOMMENDED replacement wording
+
+OUTPUT FORMAT:
+## REPORT: Document Comparison — ${vendorDoc.name} vs ${orgDoc.name}
+
+For each finding use this exact format:
+🔴 F-[NNN] | HIGH RISK | [Section/Clause] — [Short Title]
+REFERENCE: [Section number and clause title in the vendor document]
+ISSUE: [What's wrong — missing from vendor doc, non-compliant, weaker than org standard, etc.]
+CURRENT WORDING: "[Exact quote from the vendor/customer document]"
+RECOMMENDED WORDING: "[Specific replacement language aligned with org standard that the team can accept or reject]"
+
+Severity guide:
+🔴 HIGH RISK — Material deviation from org standard, missing critical protections, non-compliant terms
+🟡 MEDIUM RISK — Weaker language than org standard, ambiguous terms, missing definitions
+🟢 LOW RISK — Minor deviations, stylistic differences, nice-to-have improvements
+💡 RECOMMENDATION — Suggested additions not in either document, best practice enhancements
+
+## RISK SUMMARY
+Overall compliance rating (e.g., "65% aligned with organizational standards"). Critical gaps summary. Accept/reject/negotiate recommendation.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Section ref] | [Non-compliance issue] | [Specific action with recommended language]
+
+End with: ---
+Draft for attorney review — not legal advice.
+
+${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc : ''}`;
+
+    const prompt = `VENDOR/CUSTOMER DOCUMENT: "${vendorDoc.name}"
+--- DOCUMENT START ---
+${vendorDoc.content}
+--- DOCUMENT END ---
+
+ORGANIZATION STANDARD/PLAYBOOK: "${orgDoc.name}"
+--- DOCUMENT START ---
+${orgDoc.content}
+--- DOCUMENT END ---
+
+Compare the vendor document against the organization standard. Identify every deviation, missing clause, non-compliant term, and weaker protection. Provide specific replacement wording for each finding.`;
+
+    try {
+      const text = await chatAPI({ messages: [{ role: 'user', content: prompt }], system: compareSys });
+      setMsgs(prev => [...prev, { role: 'assistant', text, time: new Date() }]);
+    } catch (err) {
+      setMsgs(prev => [...prev, { role: 'assistant', text: `⚠ ${err.message}`, time: new Date() }]);
+    }
+    setLoading(false);
+  };
 
   /* ─── AGENT RUNNER ─── */
   const AGENT_CONFIGS = {
@@ -1091,7 +1185,7 @@ ${data}`,
               </div>
 
               <div className="sidebar-section">
-                <div className="sidebar-title">UPLOAD FILES</div>
+                <div className="sidebar-title">📎 UPLOAD FILES</div>
                 <div className="upload-zone" onClick={() => fileRef.current?.click()}
                   onDragOver={e => e.preventDefault()} onDrop={onDrop}>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>📎</div>
@@ -1111,6 +1205,55 @@ ${data}`,
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* ─── COMPARE & COMPLY ─── */}
+              <div className="sidebar-section">
+                <div className="sidebar-title">⚖ COMPARE & COMPLY</div>
+                <p className="sidebar-muted" style={{ fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
+                  Upload a vendor/customer document and your org standard. AI compares clause-by-clause.
+                </p>
+
+                {/* Vendor/Customer Doc */}
+                <div className={`compare-upload-box ${vendorDoc?.content ? 'compare-loaded' : ''}`}
+                  onClick={() => vendorFileRef.current?.click()}>
+                  <span className="compare-label">📄 Their Document</span>
+                  {vendorDoc ? (
+                    <div className="compare-file-info">
+                      <span className="compare-file-name">{vendorDoc.name.length > 22 ? vendorDoc.name.slice(0, 22) + '…' : vendorDoc.name}</span>
+                      {vendorDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
+                      <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setVendorDoc(null); }}>✕</span>
+                    </div>
+                  ) : (
+                    <span className="compare-placeholder">Click to upload vendor/customer doc</span>
+                  )}
+                </div>
+                <input ref={vendorFileRef} type="file" style={{ display: 'none' }}
+                  accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setVendorDoc); e.target.value = ''; }} />
+
+                {/* Org Standard Doc */}
+                <div className={`compare-upload-box compare-org ${orgDoc?.content ? 'compare-loaded' : ''}`}
+                  onClick={() => orgFileRef.current?.click()} style={{ marginTop: 8 }}>
+                  <span className="compare-label">🏢 Your Org Standard</span>
+                  {orgDoc ? (
+                    <div className="compare-file-info">
+                      <span className="compare-file-name">{orgDoc.name.length > 22 ? orgDoc.name.slice(0, 22) + '…' : orgDoc.name}</span>
+                      {orgDoc.reading ? <span className="compare-reading">Reading…</span> : <span className="compare-ready">✓</span>}
+                      <span className="compare-remove" onClick={(e) => { e.stopPropagation(); setOrgDoc(null); }}>✕</span>
+                    </div>
+                  ) : (
+                    <span className="compare-placeholder">Click to upload your org standard/playbook</span>
+                  )}
+                </div>
+                <input ref={orgFileRef} type="file" style={{ display: 'none' }}
+                  accept=".pdf,.doc,.docx,.txt,.csv" onChange={e => { if (e.target.files[0]) readDocFile(e.target.files[0], setOrgDoc); e.target.value = ''; }} />
+
+                {/* Compare Button */}
+                <button className="btn btn-gold compare-btn"
+                  disabled={!vendorDoc?.content || !orgDoc?.content || vendorDoc.reading || orgDoc.reading || loading}
+                  onClick={runComparison}>
+                  {loading ? '⏳ Comparing…' : '⚖ Compare Documents'}
+                </button>
               </div>
 
               <div className="sidebar-section">

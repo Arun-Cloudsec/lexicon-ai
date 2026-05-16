@@ -451,3 +451,18 @@
 .filter-active { background: var(--gold) !important; color: var(--bg-deep) !important; border-color: var(--gold) !important; font-weight: 700; }
 .skill-area-badge { font-size: 10px; font-family: var(--font-body); font-weight: 600; padding: 3px 10px; border-radius: 10px; white-space: nowrap; letter-spacing: 0.3px; flex-shrink: 0; }
 .skill-setup-tag { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(91,155,213,0.15); color: #5B9BD5; margin-left: 6px; letter-spacing: 0.5px; vertical-align: middle; }
+
+/* ═══ COMPARE & COMPLY ═══ */
+.compare-upload-box { padding: 12px 14px; border-radius: 8px; border: 1px dashed rgba(212,114,106,0.3); background: rgba(212,114,106,0.03); cursor: pointer; transition: all 0.2s; }
+.compare-upload-box:hover { border-color: rgba(212,114,106,0.5); background: rgba(212,114,106,0.06); }
+.compare-upload-box.compare-org { border-color: rgba(91,155,213,0.3); background: rgba(91,155,213,0.03); }
+.compare-upload-box.compare-org:hover { border-color: rgba(91,155,213,0.5); background: rgba(91,155,213,0.06); }
+.compare-upload-box.compare-loaded { border-style: solid; }
+.compare-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; font-family: var(--font-body); }
+.compare-placeholder { font-size: 11px; color: var(--text-dim); font-family: var(--font-body); }
+.compare-file-info { display: flex; align-items: center; gap: 6px; }
+.compare-file-name { font-size: 12px; color: var(--text-body); font-family: var(--font-body); font-weight: 500; flex: 1; }
+.compare-reading { font-size: 10px; color: #FBBF24; font-family: var(--font-body); animation: pulse 1.5s infinite; }
+.compare-ready { color: #6EE7B7; font-weight: 700; }
+.compare-remove { cursor: pointer; color: var(--red); font-size: 13px; padding: 2px; }
+.compare-btn { width: 100%; margin-top: 12px; padding: 12px; font-size: 14px; text-align: center; }
