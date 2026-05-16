@@ -383,3 +383,44 @@
 .ka-sev-high { background: rgba(220,38,38,0.15); color: #F87171; }
 .ka-sev-med { background: rgba(217,119,6,0.15); color: #FBBF24; }
 .ka-sev-low { background: rgba(5,150,105,0.15); color: #6EE7B7; }
+
+/* ═══ AUTH GATE ═══ */
+.auth-gate { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 200px); padding: 40px 20px; }
+.auth-card { background: var(--bg-card); border-radius: 16px; padding: 48px 40px; max-width: 520px; width: 100%; text-align: center; border: 1px solid var(--gold-border); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.auth-icon { font-size: 48px; margin-bottom: 16px; }
+.auth-title { font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+.auth-desc { font-size: 14px; color: var(--text-muted); font-family: var(--font-body); line-height: 1.7; margin-bottom: 28px; }
+.auth-input-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.auth-input { flex: 1; padding: 14px 18px; font-size: 16px; font-family: var(--font-body); background: var(--bg-deep); border: 1px solid var(--gold-border); border-radius: 10px; color: var(--text-body); outline: none; text-align: center; letter-spacing: 4px; }
+.auth-input:focus { border-color: var(--gold); box-shadow: 0 0 12px rgba(201,168,76,0.2); }
+.auth-error { color: var(--red); font-size: 13px; font-family: var(--font-body); margin-bottom: 12px; padding: 8px; background: rgba(212,114,106,0.08); border-radius: 6px; }
+.auth-demo-hint { margin-top: 20px; padding: 16px; background: rgba(201,168,76,0.05); border-radius: 10px; border: 1px solid rgba(201,168,76,0.1); }
+.auth-hint-label { display: block; font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--font-body); margin-bottom: 6px; }
+.auth-hint-text { font-size: 13px; color: var(--text-muted); font-family: var(--font-body); line-height: 1.6; }
+
+/* ═══ USER GUIDE ═══ */
+.guide-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.guide-card { background: var(--bg-card); border-radius: 14px; border: 1px solid rgba(201,168,76,0.1); overflow: hidden; }
+.guide-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; }
+.guide-header-1 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #C9A84C; }
+.guide-header-2 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #5B9BD5; }
+.guide-header-3 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #4ECDC4; }
+.guide-header-4 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #B07CC6; }
+.guide-header-5 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #6BAF8D; }
+.guide-header-6 { background: linear-gradient(135deg, #16213e, #1a2744); border-bottom: 2px solid #E8A838; }
+.guide-card-icon { font-size: 28px; }
+.guide-card-header h3 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.guide-card-body { padding: 24px; font-family: var(--font-body); }
+.guide-card-body p { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px; }
+.guide-what { color: var(--text-primary) !important; font-size: 13px !important; margin-top: 16px !important; margin-bottom: 6px !important; }
+.guide-areas-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin: 12px 0; }
+.guide-area-chip { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 8px; border-left: 3px solid; background: rgba(201,168,76,0.03); font-size: 13px; }
+.guide-area-chip strong { color: var(--text-primary); display: block; }
+.guide-area-desc { color: var(--text-dim); font-size: 12px; display: block; margin-top: 2px; }
+.guide-examples { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.guide-example { display: flex; gap: 12px; padding: 14px 16px; border-radius: 10px; background: rgba(22,33,62,0.4); border: 1px solid rgba(201,168,76,0.06); }
+.guide-ex-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.guide-example strong { color: var(--text-primary); }
+.guide-example div { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+.guide-connectors-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.guide-connector-chip { padding: 5px 14px; border-radius: 8px; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.12); font-size: 12px; color: var(--text-body); font-weight: 500; }

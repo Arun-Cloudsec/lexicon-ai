@@ -419,6 +419,9 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [ready, setReady] = useState(false);
   const [apiOk, setApiOk] = useState(null);
+  const [authCode, setAuthCode] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [authError, setAuthError] = useState(false);
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
 
@@ -576,6 +579,7 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
     { id: 'skills', label: 'Practice Areas', icon: '◆' },
     { id: 'agent', label: 'AI Agent', icon: '⬡' },
     { id: 'docs', label: 'Documents', icon: '▣' },
+    { id: 'guide', label: 'User Guide', icon: '◎' },
     { id: 'security', label: 'Security', icon: '◉' },
   ];
 
@@ -729,7 +733,47 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         )}
 
         {/* ══════════════════ AI AGENT ══════════════════ */}
-        {tab === 'agent' && (
+        {/* ══════════════════ AI AGENT (AUTH GATED) ══════════════════ */}
+        {tab === 'agent' && !isUnlocked && (
+          <div className="auth-gate">
+            <div className="auth-card">
+              <div className="auth-icon">🔐</div>
+              <h2 className="auth-title">AI Agent Access</h2>
+              <p className="auth-desc">
+                The AI Agent provides live legal analysis powered by Claude. 
+                Enter your access code to continue. You can explore all other sections 
+                of the platform — Dashboard, Practice Areas, Documents, User Guide, and 
+                Security Audit — without a code.
+              </p>
+              <div className="auth-input-row">
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Enter access code"
+                  value={authCode}
+                  onChange={e => { setAuthCode(e.target.value); setAuthError(false); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      if (authCode === '625244') { setIsUnlocked(true); setAuthError(false); }
+                      else { setAuthError(true); }
+                    }
+                  }}
+                />
+                <button className="btn btn-gold" onClick={() => {
+                  if (authCode === '625244') { setIsUnlocked(true); setAuthError(false); }
+                  else { setAuthError(true); }
+                }}>Unlock</button>
+              </div>
+              {authError && <div className="auth-error">⚠ Invalid access code. Please try again.</div>}
+              <div className="auth-demo-hint">
+                <span className="auth-hint-label">Demo Access</span>
+                <span className="auth-hint-text">Contact your legal operations team for the access code, or explore the platform using the tabs above.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'agent' && isUnlocked && (
           <div className="chat-layout">
             {/* Sidebar */}
             <aside className="chat-sidebar">
@@ -980,6 +1024,156 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
                   </div>
                 </div>
                 <pre className="doc-preview">{SAMPLE_DOCS[docIdx].content}</pre>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════ USER GUIDE ══════════════════ */}
+        {tab === 'guide' && (
+          <div className="fade-wrapper visible">
+            <section className="hero-card" style={{ marginBottom: 24 }}>
+              <div className="hero-content">
+                <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>📖 User Guide</h2>
+                <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>
+                  Welcome to Lexicon AI — your legal team's AI-powered intelligence platform. This guide explains each component in plain language so every stakeholder — lawyers, paralegals, operations staff, and executives — can get the most out of the platform.
+                </p>
+              </div>
+            </section>
+
+            <div className="guide-grid">
+              {/* Practice Areas */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-1">
+                  <span className="guide-card-icon">📜</span>
+                  <h3>Practice Areas</h3>
+                </div>
+                <div className="guide-card-body">
+                  <p className="guide-what"><strong>What is it?</strong></p>
+                  <p>Practice Areas are the 12 legal domains the platform covers — think of them as departments in a law firm. Each practice area groups related AI capabilities together so you can find the right tool quickly.</p>
+                  <p className="guide-what"><strong>The 12 Practice Areas:</strong></p>
+                  <div className="guide-areas-list">
+                    {PRACTICE_AREAS.map(a => (
+                      <div key={a.id} className="guide-area-chip" style={{ borderColor: a.color }}>
+                        <span>{a.icon}</span>
+                        <div>
+                          <strong>{a.name}</strong>
+                          <span className="guide-area-desc">{a.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="guide-what"><strong>How to use:</strong></p>
+                  <p>Click <strong>Practice Areas</strong> in the top menu → browse or search → click any area to see its skills → click <strong>Launch</strong> on a skill to use it with the AI Agent.</p>
+                </div>
+              </div>
+
+              {/* AI Skills */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-2">
+                  <span className="guide-card-icon">⚡</span>
+                  <h3>AI Skills</h3>
+                </div>
+                <div className="guide-card-body">
+                  <p className="guide-what"><strong>What is it?</strong></p>
+                  <p>AI Skills are specific, pre-built workflows that tell the AI exactly how to handle a particular type of legal task. Think of a skill as giving a new associate a detailed playbook — "when you get an NDA, check these 15 things in this order and flag these 8 red lines."</p>
+                  <p className="guide-what"><strong>Examples:</strong></p>
+                  <div className="guide-examples">
+                    <div className="guide-example"><span className="guide-ex-icon">📝</span><div><strong>NDA Triager</strong><br/>Reads an inbound NDA and classifies it GREEN (auto-approve), YELLOW (minor issues), or RED (needs attorney review). Only the hard ones reach a lawyer's desk.</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">🔍</span><div><strong>Vendor Agreement Review</strong><br/>Compares a vendor's contract against your approved playbook. Produces a redline memo showing where the vendor's terms deviate from your positions.</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Deposition Prep</strong><br/>Builds a deposition outline tied to your case theory, with supporting documents and impeachment material organized by topic.</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">🔒</span><div><strong>DSAR Responder</strong><br/>Drafts Data Subject Access Request responses within regulatory timelines, searches across systems, and applies exemptions.</div></div>
+                  </div>
+                  <p className="guide-what"><strong>How to use:</strong></p>
+                  <p>Select a skill from any Practice Area → it activates in the AI Agent sidebar → upload a document or describe your task → the AI applies that skill's methodology to produce structured, actionable output.</p>
+                  <p>The platform has <strong>{totalSkills} skills</strong> across all practice areas. Each one is designed to save hours of routine legal work while maintaining quality and consistency.</p>
+                </div>
+              </div>
+
+              {/* Managed Agents */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-3">
+                  <span className="guide-card-icon">🤖</span>
+                  <h3>Managed Agents</h3>
+                </div>
+                <div className="guide-card-body">
+                  <p className="guide-what"><strong>What is it?</strong></p>
+                  <p>Managed Agents are autonomous AI workers that run in the background without human prompting. Unlike skills (which you activate manually), managed agents watch, monitor, and alert your team automatically — like having a tireless junior associate who never sleeps.</p>
+                  <p className="guide-what"><strong>How they work:</strong></p>
+                  <p>You configure a managed agent once (what to watch, how often, who to alert), and it runs on a schedule. When it finds something that needs attention, it delivers a structured report to your team.</p>
+                  <p className="guide-what"><strong>The 5 Managed Agents:</strong></p>
+                  <div className="guide-examples">
+                    {MANAGED_AGENTS.map((ag, i) => (
+                      <div key={i} className="guide-example"><span className="guide-ex-icon">⟐</span><div><strong>{ag.name}</strong><br/>{ag.desc}</div></div>
+                    ))}
+                  </div>
+                  <p className="guide-what"><strong>Example in practice:</strong></p>
+                  <p>The <strong>Renewal Watcher</strong> scans your 2,400 contracts every night. On Monday morning, your team gets a report: "3 contracts auto-renew this month — Contract A has a cancel-by date of March 15, Contract B needs a 60-day notice by March 1." No one had to remember to check.</p>
+                </div>
+              </div>
+
+              {/* MCP Connections */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-4">
+                  <span className="guide-card-icon">🔌</span>
+                  <h3>MCP Connections</h3>
+                </div>
+                <div className="guide-card-body">
+                  <p className="guide-what"><strong>What is it?</strong></p>
+                  <p>MCP (Model Context Protocol) Connections are integrations that let the AI agent talk directly to the software your legal team already uses. Instead of copy-pasting between systems, the AI can read from and write to your existing tools securely.</p>
+                  <p className="guide-what"><strong>Why it matters:</strong></p>
+                  <p>Without MCP, you'd upload a contract manually, wait for analysis, then manually copy the results into your CLM. With MCP, the AI pulls the contract from Ironclad, analyzes it, and posts the review memo back — all in one workflow.</p>
+                  <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}+):</strong></p>
+                  <div className="guide-connectors-grid">
+                    {CONNECTORS.map((c, i) => (
+                      <span key={i} className="guide-connector-chip">{c}</span>
+                    ))}
+                  </div>
+                  <p className="guide-what"><strong>Categories:</strong></p>
+                  <div className="guide-examples">
+                    <div className="guide-example"><span className="guide-ex-icon">📋</span><div><strong>Contract Lifecycle</strong><br/>Ironclad, DocuSign — pull contracts for review, push signed versions back</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📁</span><div><strong>Document Management</strong><br/>iManage, Box, Google Drive — search, retrieve, and file legal documents</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">⚖️</span><div><strong>Litigation & Research</strong><br/>Everlaw, CourtListener, Trellis — monitor dockets, search case law, manage evidence</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📌</span><div><strong>Project Management</strong><br/>Slack, Jira, Linear, Asana — route legal requests, track matters, coordinate teams</div></div>
+                  </div>
+                  <p className="guide-what"><strong>Security:</strong></p>
+                  <p>All MCP connections use encrypted HTTPS channels with authentication. Data flows through secure APIs — the AI never stores credentials, and every action is logged for audit purposes. Your IT security team can review all connection configurations.</p>
+                </div>
+              </div>
+
+              {/* AI Agent */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-5">
+                  <span className="guide-card-icon">💬</span>
+                  <h3>AI Agent</h3>
+                </div>
+                <div className="guide-card-body">
+                  <p className="guide-what"><strong>What is it?</strong></p>
+                  <p>The AI Agent is the core interface where you interact with Claude — Anthropic's most advanced AI model — to get legal work done. Upload a document, select a skill, and the AI produces a structured analysis with specific findings, wording recommendations, and action items.</p>
+                  <p className="guide-what"><strong>What it produces:</strong></p>
+                  <div className="guide-examples">
+                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Structured Report Cards</strong><br/>Color-coded findings (🔴 High / 🟡 Medium / 🟢 Low) with numbered finding IDs, section references, current wording quotes, and recommended replacement language</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📥</span><div><strong>Downloadable Reports</strong><br/>Export as PDF (with title page + dashboard), Word (.doc), PowerPoint (.pptx), or Excel (.csv) — ready for stakeholder distribution</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📎</span><div><strong>Document Upload</strong><br/>Drag and drop Word documents (.docx), text files, CSVs, and more. The AI reads the full content and analyzes it immediately.</div></div>
+                  </div>
+                  <p className="guide-what"><strong>Access:</strong></p>
+                  <p>The AI Agent requires an access code to use. Contact your legal operations team for the code. All other sections (Dashboard, Practice Areas, Documents, User Guide, Security) are freely accessible for browsing.</p>
+                </div>
+              </div>
+
+              {/* Important Notes */}
+              <div className="guide-card">
+                <div className="guide-card-header guide-header-6">
+                  <span className="guide-card-icon">⚠️</span>
+                  <h3>Important Notes</h3>
+                </div>
+                <div className="guide-card-body">
+                  <div className="guide-examples">
+                    <div className="guide-example"><span className="guide-ex-icon">👨‍⚖️</span><div><strong>Human Review Required</strong><br/>Every output is a draft for attorney review. The AI accelerates legal work but does not replace professional judgment. A qualified attorney must review, verify, and approve all outputs before they are acted upon.</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">🔒</span><div><strong>Privilege Awareness</strong><br/>The platform includes privilege safeguards — destination checks before output, matter-level isolation, and privilege-tagged document handling. However, users must ensure proper privilege protocols are followed.</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📋</span><div><strong>Audit Trail</strong><br/>All interactions are logged for compliance purposes. Export your sessions as needed for matter files.</div></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
