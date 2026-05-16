@@ -316,6 +316,132 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
     downloadBlob(new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8' }), `${fname}-${ts}.csv`);
   }
 
+  // ═══ REDLINE DOC — Word document with highlighted findings and comments ═══
+  if (format === 'redline') {
+    // Get original document text from uploaded files or vendor doc
+    let originalText = '';
+    if (vendorDoc?.content) originalText = vendorDoc.content;
+    else if (files.length > 0 && files[0].content) originalText = files[0].content;
+
+    // Build highlighted document
+    let docBody = originalText || '';
+    const highlightColors = { high: '#FFD4D4', medium: '#FFF3CD', low: '#D4EDDA', rec: '#CCE5FF', finding: '#E8E8E8' };
+    const riskLabels = { high: '🔴 HIGH RISK', medium: '🟡 MEDIUM RISK', low: '🟢 LOW RISK', rec: '💡 RECOMMENDATION', finding: '📋 FINDING' };
+
+    // Sort findings by position in document (longest match first to avoid nested replacements)
+    const sortedItems = [...items].filter(i => i.currentWording).sort((a, b) => b.currentWording.length - a.currentWording.length);
+    const commentBoxes = [];
+
+    sortedItems.forEach((item, idx) => {
+      if (!item.currentWording || item.currentWording.length < 5) return;
+      const searchText = item.currentWording.slice(0, 200); // Limit search length
+      const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      try {
+        const rx = new RegExp('(' + escapedSearch.slice(0, 100) + ')', 'i');
+        if (rx.test(docBody)) {
+          const commentId = `c${idx}`;
+          const bg = highlightColors[item.type] || '#FFF3CD';
+          docBody = docBody.replace(rx, `<span style="background:${bg};padding:2px 4px;border-radius:3px;border-bottom:2px solid ${item.type === 'high' ? '#DC2626' : item.type === 'medium' ? '#D97706' : '#059669'}"><a name="${commentId}"></a>$1<sup style="color:#DC2626;font-weight:bold;font-size:10px">[${item.num}]</sup></span>`);
+          commentBoxes.push({ id: commentId, item });
+        }
+      } catch(e) {}
+    });
+
+    // Build the Word HTML document
+    const redlineHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Redline — ${title}</title>
+<style>
+@page { size: A4; margin: 2.5cm; }
+body { font-family: Calibri, Arial, sans-serif; font-size: 12pt; line-height: 1.8; color: #1a1a1a; }
+.doc-header { background: #0E2A52; color: white; padding: 20px 28px; margin: -20px -20px 24px -20px; border-radius: 4px; }
+.doc-header h1 { font-size: 18pt; margin: 0 0 6px; color: #C9A84C; }
+.doc-header p { font-size: 10pt; color: #A8B8D8; margin: 0; }
+.legend { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px; font-size: 10pt; }
+.legend-item { display: inline-block; margin-right: 18px; padding: 2px 8px; border-radius: 3px; font-size: 9pt; font-weight: 600; }
+.doc-content { white-space: pre-wrap; font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.8; border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; margin-bottom: 24px; }
+.comments-section { page-break-before: always; }
+.comments-section h2 { color: #0E2A52; font-size: 16pt; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; margin-bottom: 16px; }
+.comment-box { border-left: 4px solid; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 12px; background: #f8f9fa; page-break-inside: avoid; }
+.comment-box.high { border-color: #DC2626; }
+.comment-box.medium { border-color: #D97706; }
+.comment-box.low { border-color: #059669; }
+.comment-box.rec { border-color: #2563EB; }
+.cb-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cb-badge { padding: 2px 10px; border-radius: 10px; font-size: 9pt; font-weight: 700; color: white; }
+.cb-badge.high { background: #DC2626; } .cb-badge.medium { background: #D97706; } .cb-badge.low { background: #059669; } .cb-badge.rec { background: #2563EB; }
+.cb-num { font-family: Consolas, monospace; font-size: 10pt; color: #C9A84C; font-weight: 700; }
+.cb-title { font-weight: 700; font-size: 11pt; color: #0E2A52; }
+.cb-field { margin-top: 6px; font-size: 10pt; }
+.cb-field strong { color: #333; }
+.cb-current { background: #FEF2F2; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #DC2626; margin-top: 8px; font-size: 10pt; }
+.cb-recommended { background: #ECFDF5; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #059669; margin-top: 6px; font-size: 10pt; }
+.cb-action { margin-top: 8px; padding: 6px 12px; background: #EFF6FF; border-radius: 4px; font-size: 9pt; }
+.footer-note { text-align: center; font-size: 9pt; color: #888; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 12px; }
+</style></head><body>
+
+<div class="doc-header">
+<h1>⚖ Redline Document — ${title}</h1>
+<p>Generated ${ts} | ${items.length} findings highlighted | Lexicon AI — Legal Intelligence Platform</p>
+</div>
+
+<div class="legend">
+<strong>Legend:</strong>
+<span class="legend-item" style="background:#FFD4D4">🔴 High Risk</span>
+<span class="legend-item" style="background:#FFF3CD">🟡 Medium Risk</span>
+<span class="legend-item" style="background:#D4EDDA">🟢 Low Risk</span>
+<span class="legend-item" style="background:#CCE5FF">💡 Recommendation</span>
+<br><em style="font-size:9pt;color:#666">Highlighted text indicates findings. Click [F-NNN] references to jump to comments below.</em>
+</div>
+
+<h2 style="color:#0E2A52;font-size:14pt">Reviewed Document</h2>
+<div class="doc-content">${docBody || '<em style="color:#999">No original document uploaded. Upload a document and re-run analysis to generate a redline.</em>'}</div>
+
+<div class="comments-section">
+<h2>Comments & Recommended Changes (${commentBoxes.length} findings)</h2>
+<p style="font-size:10pt;color:#666;margin-bottom:16px">Review each comment below. Accept the recommended wording or reject to keep the original language.</p>
+
+${commentBoxes.map(({ id, item }) => `
+<div class="comment-box ${item.type}">
+  <div class="cb-header">
+    <span class="cb-badge ${item.type}">${riskLabels[item.type] || 'FINDING'}</span>
+    <span class="cb-num">${item.num}</span>
+    <span class="cb-title">${item.title}</span>
+  </div>
+  ${item.reference ? `<div class="cb-field"><strong>📌 Reference:</strong> ${item.reference}</div>` : ''}
+  ${item.issue ? `<div class="cb-field"><strong>Issue:</strong> ${item.issue}</div>` : ''}
+  ${item.currentWording ? `<div class="cb-current"><strong>⛔ Current Wording:</strong><br/><em>"${item.currentWording}"</em></div>` : ''}
+  ${item.recommendedWording ? `<div class="cb-recommended"><strong>✅ Recommended Wording:</strong><br/><em>"${item.recommendedWording}"</em></div>` : ''}
+  <div class="cb-action"><strong>Action Required:</strong> ☐ Accept recommended change &nbsp; ☐ Reject — keep original &nbsp; ☐ Modify</div>
+</div>
+`).join('')}
+
+${items.filter(i => i.currentWording && !commentBoxes.find(c => c.item.num === i.num)).length > 0 ? `
+<h3 style="color:#D97706;margin-top:24px">Additional Findings (not matched in document text)</h3>
+${items.filter(i => !commentBoxes.find(c => c.item.num === i.num)).map(item => `
+<div class="comment-box ${item.type}">
+  <div class="cb-header">
+    <span class="cb-badge ${item.type}">${riskLabels[item.type] || 'FINDING'}</span>
+    <span class="cb-num">${item.num}</span>
+    <span class="cb-title">${item.title}</span>
+  </div>
+  ${item.issue ? `<div class="cb-field"><strong>Issue:</strong> ${item.issue}</div>` : ''}
+  ${item.currentWording ? `<div class="cb-current"><strong>⛔ Current Wording:</strong><br/><em>"${item.currentWording}"</em></div>` : ''}
+  ${item.recommendedWording ? `<div class="cb-recommended"><strong>✅ Recommended Wording:</strong><br/><em>"${item.recommendedWording}"</em></div>` : ''}
+  <div class="cb-action"><strong>Action Required:</strong> ☐ Accept &nbsp; ☐ Reject &nbsp; ☐ Modify</div>
+</div>
+`).join('')}` : ''}
+</div>
+
+<div class="footer-note">
+  CONFIDENTIAL — Draft for attorney review — not legal advice<br>
+  Lexicon AI — Legal Intelligence Platform | ${ts}
+</div>
+</body></html>`;
+
+    downloadBlob(new Blob(['\uFEFF' + redlineHtml], { type: 'application/msword' }), `${fname}-REDLINE-${ts}.doc`);
+  }
+
   // ═══ POWERPOINT — professional slide deck ═══
   if (format === 'pptx') {
     const pptx = new PptxGenJS();
@@ -1189,6 +1315,7 @@ ${data}`,
                             <span className="report-title">{(agentResults[id].text.match(/##\s*REPORT:\s*(.+)/i) || [,'Agent Report'])[1]}</span>
                             <div className="report-header-actions">
                               <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'view')}>🔍 Full Report</button>
+                              <button className="btn-export btn-export-redline" onClick={() => exportReport(agentResults[id].text, 'redline')}>📋 Redline</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pdf')}>📥 PDF</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'word')}>📝 Word</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pptx')}>📊 PPT</button>
@@ -1460,6 +1587,8 @@ ${data}`,
                           <span className="report-title">{(m.text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1]}</span>
                           <div className="report-header-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 Full Report</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
@@ -1537,6 +1666,8 @@ ${data}`,
                           <span className="report-disclaimer-inline">Draft for attorney review — not legal advice.</span>
                           <div className="report-bottom-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 View Full Report</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
