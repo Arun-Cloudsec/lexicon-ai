@@ -1831,8 +1831,6 @@ ${data}`,
           <span>⚖ Lexicon AI — Legal Intelligence Platform</span>
           <span className="footer-divider">|</span>
           <span>Powered by Claude for Legal</span>
-          <span className="footer-divider">|</span>
-          <a href="https://github.com/Arun-Cloudsec/lexicon-ai" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
         </div>
       </footer>
     </div>
