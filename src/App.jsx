@@ -117,7 +117,7 @@ function extractSection(text, heading) {
   return match ? match[1].trim() : '';
 }
 
-function exportReport(text, format) {
+function exportReport(text, format, originalDocText) {
   const ts = new Date().toISOString().split('T')[0];
   const title = (text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1].trim();
   const items = parseReport(text);
@@ -318,10 +318,8 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
 
   // ═══ REDLINE DOC — Word document with highlighted findings and comments ═══
   if (format === 'redline') {
-    // Get original document text from uploaded files or vendor doc
-    let originalText = '';
-    if (vendorDoc?.content) originalText = vendorDoc.content;
-    else if (files.length > 0 && files[0].content) originalText = files[0].content;
+    // Get original document text from parameter
+    let originalText = originalDocText || '';
 
     // Build highlighted document
     let docBody = originalText || '';
@@ -1315,7 +1313,7 @@ ${data}`,
                             <span className="report-title">{(agentResults[id].text.match(/##\s*REPORT:\s*(.+)/i) || [,'Agent Report'])[1]}</span>
                             <div className="report-header-actions">
                               <button className="btn-export btn-export-primary" onClick={() => exportReport(agentResults[id].text, 'view')}>🔍 Full Report</button>
-                              <button className="btn-export btn-export-redline" onClick={() => exportReport(agentResults[id].text, 'redline')}>📋 Redline</button>
+                              <button className="btn-export btn-export-redline" onClick={() => exportReport(agentResults[id].text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pdf')}>📥 PDF</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'word')}>📝 Word</button>
                               <button className="btn-export" onClick={() => exportReport(agentResults[id].text, 'pptx')}>📊 PPT</button>
@@ -1587,8 +1585,7 @@ ${data}`,
                           <span className="report-title">{(m.text.match(/##\s*REPORT:\s*(.+)/i) || [,'Legal Analysis Report'])[1]}</span>
                           <div className="report-header-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 Full Report</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
@@ -1666,8 +1663,7 @@ ${data}`,
                           <span className="report-disclaimer-inline">Draft for attorney review — not legal advice.</span>
                           <div className="report-bottom-actions">
                             <button className="btn-export btn-export-primary" onClick={() => exportReport(m.text, 'view')}>🔍 View Full Report</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
-                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline')}>📋 Redline</button>
+                            <button className="btn-export btn-export-redline" onClick={() => exportReport(m.text, 'redline', vendorDoc?.content || files?.[0]?.content || '')}>📋 Redline</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pdf')}>📥 PDF</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'word')}>📝 Word</button>
                             <button className="btn-export" onClick={() => exportReport(m.text, 'pptx')}>📊 PPT</button>
