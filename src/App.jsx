@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './App.css'
-import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './practiceAreas.js'
-import { SAMPLE_DOCS, VULN_REPORT } from './documents.js'
-import { COMPARE_PAIRS } from './comparePairs.js'
-import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './agentData.js'
+import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './data/practiceAreas.js'
+import { SAMPLE_DOCS, VULN_REPORT } from './data/documents.js'
+import { COMPARE_PAIRS } from './data/comparePairs.js'
+import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './data/agentData.js'
 
 /* ════════════════════════════════════════════════
    LEXICON AI v2.0 — Legal Intelligence Platform
