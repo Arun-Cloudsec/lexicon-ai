@@ -796,7 +796,7 @@ RULES:
 1. Go clause by clause through the vendor document
 2. Compare each clause against the org standard
 3. Identify: missing clauses, non-compliant language, weaker protections, missing definitions, unfavorable terms
-4. For each finding, provide the EXACT current wording and your RECOMMENDED replacement wording
+4. For each finding, provide the issue description and your RECOMMENDED ACTION
 
 OUTPUT FORMAT:
 ## REPORT: Document Comparison — ${vendorDoc.name} vs ${orgDoc.name}
@@ -1117,6 +1117,51 @@ ${data}`,
               </div>
             </section>
 
+            {/* ─── QUICK START ─── */}
+            <section className="section-block" style={{ marginTop: 0 }}>
+              <div className="section-header">
+                <h2 className="section-heading">🚀 Quick Start — Test the Platform in 4 Steps</h2>
+                <p className="section-sub">Get your first AI-generated legal analysis in under 2 minutes</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                {[
+                  { step: '1', icon: '📋', title: 'Pick a Practice Area', desc: 'Go to Practice Areas → click any area (try Commercial Legal or Litigation)', action: 'Browse Skills →', onClick: () => setTab('skills') },
+                  { step: '2', icon: '⚡', title: 'Launch a Skill', desc: 'Click Launch on any skill — try "NDA Triager" or "Contract Review" to start', action: 'Open AI Agent →', onClick: () => setTab('agent') },
+                  { step: '3', icon: '📄', title: 'Use a Sample Doc', desc: 'Don\'t have a doc? Click Documents tab and load any sample — NDA, MSA, DPA, or Employment Offer', action: 'View Samples →', onClick: () => setTab('docs') },
+                  { step: '4', icon: '🤖', title: 'Run a Managed Agent', desc: 'Go to Agents tab → click "Run with Sample Data" on any agent for a live structured report', action: 'Try Agents →', onClick: () => setTab('agents') },
+                ].map((s, i) => (
+                  <div key={i}
+                    onClick={s.onClick}
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(201,168,76,0.15)',
+                      borderRadius: 14,
+                      padding: '20px 18px',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s ease',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.4)'; e.currentTarget.style.background = 'rgba(201,168,76,0.06)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <span style={{
+                        width: 32, height: 32, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #C9A84C, #a08636)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, fontWeight: 800, color: '#0a0e1a',
+                      }}>{s.step}</span>
+                      <span style={{ fontSize: 20 }}>{s.icon}</span>
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', marginBottom: 6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>{s.title}</div>
+                    <div style={{ fontSize: 13, color: '#8896a8', lineHeight: 1.5, marginBottom: 12 }}>{s.desc}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>{s.action}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             {/* ─── PRACTICE AREAS ─── */}
             <section className="section-block">
               <div className="section-header">
@@ -1151,7 +1196,7 @@ ${data}`,
               </div>
               <div className="features-grid">
                 {[
-                  { icon: '📝', title: 'Structured Findings', desc: 'Every finding numbered F-001 with section reference, exact current wording, and recommended replacement language', color: '#C9A84C' },
+                  { icon: '📝', title: 'Structured Findings', desc: 'Every finding numbered F-001 with section reference, issue description, and recommended action — ready for attorney review', color: '#C9A84C' },
                   { icon: '⚖', title: 'Compare & Comply', desc: 'Upload vendor doc + org standard — AI compares clause-by-clause and highlights every deviation', color: '#D4726A' },
                   { icon: '🤖', title: 'Managed Agents', desc: 'Autonomous agents scan contracts, regulatory feeds, and launches — deliver structured reports', color: '#4ECDC4' },
                   { icon: '📊', title: 'One-Click Export', desc: 'PDF with title page, Word for redlining, PowerPoint for leadership, Excel for tracking', color: '#5B9BD5' },
@@ -1931,15 +1976,23 @@ ${data}`,
                   <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}):</strong></p>
                   <div className="guide-connectors-grid">
                     {CONNECTORS.map((c, i) => (
-                      <span key={i} className="guide-connector-chip">{c}</span>
+                      <span key={i} className="guide-connector-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span>{c.icon}</span> {c.name}
+                        {c.auto && <span style={{ fontSize: 9, background: 'rgba(78,205,196,0.2)', color: '#4ECDC4', padding: '1px 5px', borderRadius: 4, marginLeft: 4 }}>AUTO</span>}
+                      </span>
                     ))}
                   </div>
                   <p className="guide-what"><strong>Categories:</strong></p>
                   <div className="guide-examples">
-                    <div className="guide-example"><span className="guide-ex-icon">📋</span><div><strong>Contract Lifecycle</strong><br/>Ironclad, DocuSign — pull contracts for review, push signed versions back</div></div>
-                    <div className="guide-example"><span className="guide-ex-icon">📁</span><div><strong>Document Management</strong><br/>iManage, Box, Google Drive — search, retrieve, and file legal documents</div></div>
-                    <div className="guide-example"><span className="guide-ex-icon">⚖️</span><div><strong>Litigation & Research</strong><br/>Everlaw, CourtListener, Trellis — monitor dockets, search case law, manage evidence</div></div>
-                    <div className="guide-example"><span className="guide-ex-icon">📌</span><div><strong>Project Management</strong><br/>Slack, Jira, Linear, Asana — route legal requests, track matters, coordinate teams</div></div>
+                    {[...new Set(CONNECTORS.map(c => c.cat))].map((cat, ci) => (
+                      <div key={ci} className="guide-example">
+                        <span className="guide-ex-icon">{CONNECTORS.find(c => c.cat === cat)?.icon || '🔗'}</span>
+                        <div>
+                          <strong>{cat}</strong><br/>
+                          {CONNECTORS.filter(c => c.cat === cat).map(c => c.name).join(', ')}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   <p className="guide-what"><strong>Security:</strong></p>
                   <p>All MCP connections use encrypted HTTPS channels with authentication. Data flows through secure APIs — the AI never stores credentials, and every action is logged for audit purposes. Your IT security team can review all connection configurations.</p>
@@ -1957,7 +2010,7 @@ ${data}`,
                   <p>The AI Agent is the core interface where you interact with Claude — Anthropic's most advanced AI model — to get legal work done. Upload a document, select a skill, and the AI produces a structured analysis with specific findings, wording recommendations, and action items.</p>
                   <p className="guide-what"><strong>What it produces:</strong></p>
                   <div className="guide-examples">
-                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Structured Report Cards</strong><br/>Color-coded findings (🔴 High / 🟡 Medium / 🟢 Low) with numbered finding IDs, section references, current wording quotes, and recommended replacement language</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Structured Report Cards</strong><br/>Color-coded findings (🔴 High / 🟡 Medium / 🟢 Low) with numbered finding IDs, section references, issue descriptions, and recommended actions</div></div>
                     <div className="guide-example"><span className="guide-ex-icon">📥</span><div><strong>Downloadable Reports</strong><br/>Export as PDF (with title page + dashboard), Word (.doc), PowerPoint (.pptx), or Excel (.csv) — ready for stakeholder distribution</div></div>
                     <div className="guide-example"><span className="guide-ex-icon">📎</span><div><strong>Document Upload</strong><br/>Drag and drop Word documents (.docx), text files, CSVs, and more. The AI reads the full content and analyzes it immediately.</div></div>
                   </div>
