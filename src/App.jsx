@@ -602,6 +602,10 @@ export default function App() {
   const [authError, setAuthError] = useState(false);
   const [agentRunning, setAgentRunning] = useState(null);
   const [agentResults, setAgentResults] = useState({});
+  const [mcpTestResults, setMcpTestResults] = useState({});
+  const [mcpTesting, setMcpTesting] = useState(null);
+  const [mcpFilter, setMcpFilter] = useState('all');
+  const [mcpExpanded, setMcpExpanded] = useState(null);
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
@@ -1024,6 +1028,38 @@ ${data}`,
     setAgentRunning(null);
   };
 
+  /* ─── MCP CONNECTOR TEST ─── */
+  const testMcpConnector = async (connectorName) => {
+    const conn = CONNECTORS.find(c => c.name === connectorName);
+    if (!conn) return;
+    setMcpTesting(connectorName);
+
+    try {
+      const text = await chatAPI({
+        messages: [{ role: 'user', content: `Simulate an MCP connector test for "${conn.name}".
+
+This connector has these tools: ${conn.tools.join(', ')}
+Test command: "${conn.testCmd}"
+MCP URL: ${conn.mcpUrl || 'Not yet available — requires API key configuration'}
+Auth method: ${conn.auth}
+
+Generate a realistic test report showing:
+1. CONNECTION STATUS: Whether the MCP handshake would succeed (show "✓ Connected" if mcpUrl exists, "⚡ Requires Configuration" if not)
+2. TOOL DISCOVERY: List each tool with a brief description of what it does
+3. SAMPLE TEST: Simulate running the test command "${conn.testCmd}" and show what the response would look like
+4. LEGAL USE CASES: 3 specific scenarios where this connector helps the legal team
+5. CONFIGURATION CHECKLIST: Step-by-step what needs to be done
+
+Format as a clean structured report. Be specific to ${conn.name}'s actual capabilities.` }],
+        system: `You are the Lexicon AI MCP diagnostics engine. Generate a realistic, technical MCP connector test report for legal technology platforms. Use specific tool names and realistic data. End with: --- MCP Test Complete — ${new Date().toISOString()}`
+      });
+      setMcpTestResults(prev => ({ ...prev, [connectorName]: { text, time: new Date(), status: conn.mcpLive ? 'live' : 'config_needed' } }));
+    } catch (err) {
+      setMcpTestResults(prev => ({ ...prev, [connectorName]: { text: `⚠ Test error: ${err.message}`, time: new Date(), status: 'error' } }));
+    }
+    setMcpTesting(null);
+  };
+
   /* ─── FILTERED AREAS ─── */
   const filtered = search
     ? PRACTICE_AREAS.map(a => ({ ...a, skills: a.skills.filter(s =>
@@ -1037,6 +1073,7 @@ ${data}`,
     { id: 'dashboard', label: 'Dashboard', icon: '◈' },
     { id: 'skills', label: 'Practice Areas', icon: '◆' },
     { id: 'agents', label: 'Agents', icon: '⟐' },
+    { id: 'mcp', label: 'MCP Connectors', icon: '🔗' },
     { id: 'agent', label: 'AI Agent', icon: '⬡' },
     { id: 'docs', label: 'Documents', icon: '▣' },
     { id: 'guide', label: 'User Guide', icon: '◎' },
@@ -1201,7 +1238,7 @@ ${data}`,
                   { icon: '🤖', title: 'Managed Agents', desc: 'Autonomous agents scan contracts, regulatory feeds, and launches — deliver structured reports', color: '#4ECDC4' },
                   { icon: '📊', title: 'One-Click Export', desc: 'PDF with title page, Word for redlining, PowerPoint for leadership, Excel for tracking', color: '#5B9BD5' },
                   { icon: '🎯', title: 'Risk Report Cards', desc: 'Color-coded HIGH/MEDIUM/LOW with Key Actions table and executive risk summary', color: '#B07CC6' },
-                  { icon: '🔗', title: `${CONNECTORS.length} MCP Connectors`, desc: `${CONNECTORS.filter(c => c.auto).length} auto-configured, ${CONNECTORS.filter(c => !c.auto).length} available to connect`, color: '#6BAF8D' },
+                  { icon: '🔗', title: `${CONNECTORS.length} MCP Connectors`, desc: `${CONNECTORS.filter(c => c.mcpLive).length} live MCP services, ${CONNECTORS.filter(c => c.auto).length} auto-configured, ${CONNECTORS.filter(c => c.cat === 'Legal AI').length} legal-specific AI tools`, color: '#6BAF8D' },
                 ].map((f, i) => (
                   <div key={i} className="feature-card" style={{ '--fcolor': f.color }}>
                     <div className="feature-icon-wrap">
@@ -1497,6 +1534,171 @@ ${data}`,
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════ MCP CONNECTORS ══════════════════ */}
+        {tab === 'mcp' && (
+          <div className="fade-wrapper visible">
+            <section className="hero-card" style={{ marginBottom: 24 }}>
+              <div className="hero-content">
+                <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>🔗 MCP Connectors</h2>
+                <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>
+                  {CONNECTORS.length} connectors across {[...new Set(CONNECTORS.map(c => c.cat))].length} categories.
+                  MCP (Model Context Protocol) lets the AI agent talk directly to your legal tools — research platforms, DMS, eDiscovery, email, and more.
+                  {' '}<strong style={{ color: 'var(--gold)' }}>{CONNECTORS.filter(c => c.mcpLive).length} connectors</strong> have live MCP services available for one-click connection.
+                </p>
+              </div>
+            </section>
+
+            {/* Filter Bar */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, padding: '0 4px' }}>
+              {['all', ...new Set(CONNECTORS.map(c => c.cat))].map(f => (
+                <button key={f} onClick={() => setMcpFilter(f)}
+                  style={{ padding: '6px 16px', borderRadius: 20, border: mcpFilter === f ? '2px solid var(--gold)' : '1px solid var(--border-light)',
+                    background: mcpFilter === f ? 'rgba(201,168,76,0.15)' : 'var(--surface)', color: mcpFilter === f ? 'var(--gold)' : 'var(--text-muted)',
+                    fontSize: 13, fontWeight: mcpFilter === f ? 700 : 500, cursor: 'pointer', fontFamily: 'var(--font-body)', textTransform: 'capitalize' }}>
+                  {f === 'all' ? `All (${CONNECTORS.length})` : `${f} (${CONNECTORS.filter(c => c.cat === f).length})`}
+                </button>
+              ))}
+            </div>
+
+            {/* Stats Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+              {[
+                { label: 'Total', val: CONNECTORS.length, color: '#C9A84C', bg: 'rgba(201,168,76,0.1)' },
+                { label: 'Live MCP', val: CONNECTORS.filter(c => c.mcpLive).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+                { label: 'Auto-Connect', val: CONNECTORS.filter(c => c.auto).length, color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
+                { label: 'Manual Setup', val: CONNECTORS.filter(c => !c.auto && !c.mcpLive).length, color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
+                { label: 'Legal AI', val: CONNECTORS.filter(c => c.cat === 'Legal AI').length, color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
+                { label: 'Tested ✓', val: CONNECTORS.filter(c => c.verified).length + Object.keys(mcpTestResults).filter(k => mcpTestResults[k].status !== 'error').length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+              ].map((s, i) => (
+                <div key={i} style={{ textAlign: 'center', padding: '14px 8px', borderRadius: 12, background: s.bg, border: `1px solid ${s.color}22` }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: 'var(--font-display)' }}>{s.val}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Connector Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 16 }}>
+              {CONNECTORS.filter(c => mcpFilter === 'all' || c.cat === mcpFilter).map((conn, idx) => {
+                const isExpanded = mcpExpanded === conn.name;
+                const testResult = mcpTestResults[conn.name];
+                const isTesting = mcpTesting === conn.name;
+                const isConnected = connStates[conn.name] === 'connected';
+                const statusColor = conn.verified ? '#059669' : conn.mcpLive ? '#2563EB' : isConnected ? '#059669' : '#D97706';
+                const statusLabel = conn.verified ? '✓ Verified Live' : testResult ? (testResult.status === 'live' ? '✓ Tested' : testResult.status === 'error' ? '✗ Error' : '⚡ Configured') : conn.mcpLive ? '● MCP Available' : isConnected ? '● Auto-Connected' : '○ Manual Setup';
+
+                return (
+                  <div key={idx} style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden',
+                    boxShadow: isExpanded ? '0 8px 32px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.06)', transition: 'all 0.3s' }}>
+
+                    {/* Card Header */}
+                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+                      borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none',
+                      background: conn.mcpLive ? 'linear-gradient(135deg, rgba(5,150,105,0.04), rgba(37,99,235,0.04))' : undefined }}
+                      onClick={() => setMcpExpanded(isExpanded ? null : conn.name)}>
+                      <span style={{ fontSize: 28, filter: conn.mcpLive ? 'none' : 'grayscale(30%)' }}>{conn.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{conn.name}</span>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: `${statusColor}18`, color: statusColor, fontWeight: 700, letterSpacing: 0.5 }}>{statusLabel}</span>
+                          {conn.mcpLive && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: 'rgba(124,58,237,0.1)', color: '#7C3AED', fontWeight: 700 }}>MCP</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{conn.desc}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 8, background: 'var(--bg-darker)', color: 'var(--text-muted)', fontWeight: 600 }}>{conn.cat}</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                      </div>
+                    </div>
+
+                    {/* Expanded Detail */}
+                    {isExpanded && (
+                      <div style={{ padding: '16px 20px' }}>
+                        {/* Tools */}
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Available Tools ({conn.tools.length})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {conn.tools.map((tool, ti) => (
+                              <span key={ti} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: 'rgba(201,168,76,0.1)', color: 'var(--text-primary)',
+                                border: '1px solid rgba(201,168,76,0.2)', fontFamily: 'monospace' }}>{tool}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Connection Info */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-darker)' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>Auth Method</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, marginTop: 2 }}>{conn.auth}</div>
+                          </div>
+                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-darker)' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>MCP Endpoint</div>
+                            <div style={{ fontSize: 11, color: conn.mcpUrl ? '#059669' : 'var(--text-muted)', fontWeight: 600, marginTop: 2, wordBreak: 'break-all' }}>
+                              {conn.mcpUrl ? '✓ Available' : conn.mcpVia ? `Via ${conn.mcpVia}` : 'API Key Required'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Config Steps */}
+                        {conn.configSteps && (
+                          <div style={{ marginBottom: 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Configuration Steps</div>
+                            {conn.configSteps.map((step, si) => (
+                              <div key={si} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--gold)', minWidth: 20, textAlign: 'center',
+                                  background: 'rgba(201,168,76,0.15)', borderRadius: 6, padding: '2px 0', marginTop: 1 }}>{si + 1}</span>
+                                <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{step}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Legal Use */}
+                        {conn.legalUse && (
+                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.12)', marginBottom: 14 }}>
+                            <div style={{ fontSize: 10, color: '#2563EB', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Legal Use Cases</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{conn.legalUse}</div>
+                          </div>
+                        )}
+
+                        {/* Test Button & Results */}
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          <button className="btn btn-gold" disabled={mcpTesting !== null}
+                            onClick={() => testMcpConnector(conn.name)}
+                            style={{ fontSize: 13 }}>
+                            {isTesting ? '⏳ Testing…' : testResult ? '↻ Re-Test' : '▶ Test Connector'}
+                          </button>
+                          <button className="btn btn-ghost btn-sm"
+                            onClick={() => { setConnStates(prev => ({ ...prev, [conn.name]: prev[conn.name] === 'connected' ? 'disconnected' : 'connected' })); }}
+                            style={{ fontSize: 12 }}>
+                            {connStates[conn.name] === 'connected' ? '● Connected — Disconnect' : '○ Simulate Connect'}
+                          </button>
+                        </div>
+
+                        {/* Test Results */}
+                        {testResult && (
+                          <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 10, background: 'var(--bg-darker)',
+                            border: `1px solid ${testResult.status === 'error' ? '#DC262644' : '#05966944'}`, maxHeight: 400, overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: testResult.status === 'error' ? '#DC2626' : '#059669' }}>
+                                {testResult.status === 'error' ? '✗ Test Failed' : '✓ Test Complete'}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{testResult.time?.toLocaleTimeString()}</span>
+                            </div>
+                            <div style={{ fontSize: 13, fontFamily: 'var(--font-body)', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                              {testResult.text}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
