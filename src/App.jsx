@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import mammoth from 'mammoth';
 import PptxGenJS from 'pptxgenjs';
-import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './data/practiceAreas.js';
-import { SAMPLE_DOCS, VULN_REPORT } from './data/documents.js';
-import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './data/agentData.js';
+import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS, OWASP_CHECKS } from './data/practiceAreas.js';
+import { SAMPLE_DOCS } from './data/documents.js';
+import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LIT_HOLDS, SAMPLE_PRIV_LOG, SAMPLE_OC_SPEND } from './data/agentData.js';
 import { COMPARE_PAIRS } from './data/comparePairs.js';
 import './App.css';
 
@@ -51,7 +51,7 @@ function parseReport(text) {
       if (oldMatch) {
         if (currentItem) items.push(currentItem);
         const typeMap = { '🔴': 'high', '🟡': 'medium', '🟢': 'low', '💡': 'rec', '📋': 'finding' };
-        currentItem = { type: typeMap[oldMatch[1]] || 'finding', num: '', title: oldMatch[2].split('—')[0]?.trim(), body: oldMatch[2], reference: '', issue: '', currentWording: '', recommendedWording: '' };
+        currentItem = { type: typeMap[oldMatch[1]] || 'finding', num: '', title: oldMatch[2].split('—')[0]?.trim(), body: oldMatch[2], reference: '', issue: '', recommendedAction: '' };
       } else if (currentItem && t) {
         currentItem.body += ' ' + t;
       }
@@ -71,7 +71,7 @@ function parseReport(text) {
     const title = sectionTitle.slice(1).join('—').trim() || section;
 
     const getField = (label) => {
-      const rx = new RegExp(label + ':\\s*(.+?)(?=\\n(?:REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING|🔴|🟡|🟢|💡|📋|##|---|$))', 's');
+      const rx = new RegExp(label + ':\\s*(.+?)(?=\\n(?:REFERENCE|ISSUE|RECOMMENDED ACTION|🔴|🟡|🟢|💡|📋|##|---|$))', 's');
       const m = block.match(rx);
       return m ? m[1].trim().replace(/^[""]|[""]$/g, '') : '';
     };
@@ -83,9 +83,8 @@ function parseReport(text) {
       section,
       reference: getField('REFERENCE'),
       issue: getField('ISSUE'),
-      currentWording: getField('CURRENT WORDING'),
-      recommendedWording: getField('RECOMMENDED WORDING'),
-      body: getField('ISSUE') || block.split('\n').slice(1).map(l => l.trim()).filter(l => l && !l.match(/^(REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING):/)).join(' '),
+      recommendedAction: getField('RECOMMENDED ACTION'),
+      body: getField('ISSUE') || block.split('\n').slice(1).map(l => l.trim()).filter(l => l && !l.match(/^(REFERENCE|ISSUE|RECOMMENDED ACTION):/)).join(' '),
     });
   }
   return items;
@@ -153,7 +152,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#0E2A52;line-height:1.5}
 .dash-card{padding:20px;border-radius:10px;text-align:center;border:1px solid #e2e8f0}
 .dash-card .num{font-size:36px;font-weight:700}
 .dash-card .lbl{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
-.dash-card-high{background:#FEF2F2;border-color:#FECACA}.dash-card-high .num{color:#DC2626}
+.dash-card-high{background:#ECFDF5;border-color:#FECACA}.dash-card-high .num{color:#DC2626}
 .dash-card-medium{background:#FFFBEB;border-color:#FDE68A}.dash-card-medium .num{color:#D97706}
 .dash-card-low{background:#ECFDF5;border-color:#A7F3D0}.dash-card-low .num{color:#059669}
 .dash-card-rec{background:#EFF6FF;border-color:#BFDBFE}.dash-card-rec .num{color:#2563EB}
@@ -177,7 +176,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#0E2A52;line-height:1.5}
 .findings{padding:48px;max-width:900px;margin:0 auto}
 .findings h2{font-size:22px;color:#0E2A52;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:20px}
 .item{padding:16px 20px;margin:12px 0;border-radius:10px;border-left:5px solid;page-break-inside:avoid}
-.item-high{border-color:#DC2626;background:#FEF2F2}
+.item-high{border-color:#DC2626;background:#ECFDF5}
 .item-medium{border-color:#D97706;background:#FFFBEB}
 .item-low{border-color:#059669;background:#ECFDF5}
 .item-rec{border-color:#2563EB;background:#EFF6FF}
@@ -234,7 +233,7 @@ ${kas.map(ka => `<tr class="ka-${ka.severity.toLowerCase().includes('high') ? 'h
 <div class="page-break"></div>
 <div class="findings">
 <h2>Detailed Findings (${totalFindings})</h2>
-${items.map((item, idx) => `<div class="item item-${item.type}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><span style="font-size:12px;color:#C9A84C;font-weight:700;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</span></div><h3>${item.title}</h3>${item.reference ? '<p style="font-size:12px;color:#5B9BD5;margin:2px 0">📌 ' + item.section + (item.reference ? ' — ' + item.reference : '') + '</p>' : ''}${item.issue ? '<p style="margin:6px 0"><strong>Issue:</strong> ' + item.issue + '</p>' : (item.body ? '<p>' + item.body + '</p>' : '')}${item.currentWording ? '<div style="background:#FEF2F2;padding:8px 12px;border-radius:6px;border-left:3px solid #DC2626;margin:6px 0;font-size:13px"><strong style="color:#DC2626">⛔ Current Wording:</strong> <em>"' + item.currentWording + '"</em></div>' : ''}${item.recommendedWording ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#059669">✅ Recommended Wording:</strong> <em>"' + item.recommendedWording + '"</em></div>' : ''}</div>`).join('')}
+${items.map((item, idx) => `<div class="item item-${item.type}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><span style="font-size:12px;color:#C9A84C;font-weight:700;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</span></div><h3>${item.title}</h3>${item.reference ? '<p style="font-size:12px;color:#5B9BD5;margin:2px 0">📌 ' + item.section + (item.reference ? ' — ' + item.reference : '') + '</p>' : ''}${item.issue ? '<p style="margin:6px 0"><strong>Issue:</strong> ' + item.issue + '</p>' : (item.body ? '<p>' + item.body + '</p>' : '')}${item.recommendedAction ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#DC2626">✅ Recommended Action:</strong> <em>"' + item.recommendedAction + '"</em></div>' : ''}${item.recommendedAction ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#059669">✅ Recommended Action:</strong> <em>"' + item.recommendedAction + '"</em></div>' : ''}</div>`).join('')}
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
@@ -266,7 +265,7 @@ h2{font-size:20px;color:#0E2A52;margin-top:24px;border-bottom:2px solid #E5E1D8;
 table{border-collapse:collapse;width:100%;margin:16px 0}
 td,th{border:1px solid #ddd;padding:10px 14px;font-size:13px}
 th{background:#0E2A52;color:white;font-weight:700;text-align:left}
-.high{background:#FEF2F2;border-left:4px solid #DC2626}
+.high{background:#ECFDF5;border-left:4px solid #DC2626}
 .medium{background:#FFFBEB;border-left:4px solid #D97706}
 .low{background:#ECFDF5;border-left:4px solid #059669}
 .rec{background:#EFF6FF;border-left:4px solid #2563EB}
@@ -295,7 +294,7 @@ ${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3>Key A
 <h2>Detailed Findings (${totalFindings})</h2>
 <table>
 <tr><th style="width:60px">#</th><th style="width:90px">Severity</th><th style="width:160px">Finding</th><th style="width:160px">Reference</th><th>Issue & Recommendation</th></tr>
-${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</td><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td style="font-size:12px;color:#5B9BD5">${item.section || ''}${item.reference ? '<br>' + item.reference : ''}</td><td>${item.issue || item.body}${item.currentWording ? '<br><br><strong style="color:#DC2626">⛔ Current:</strong> <em>' + item.currentWording + '</em>' : ''}${item.recommendedWording ? '<br><strong style="color:#059669">✅ Recommended:</strong> <em>' + item.recommendedWording + '</em>' : ''}</td></tr>`).join('')}
+${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</td><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td style="font-size:12px;color:#5B9BD5">${item.section || ''}${item.reference ? '<br>' + item.reference : ''}</td><td>${item.issue || item.body}${item.recommendedAction ? '<br><br><strong style="color:#DC2626">✅ Action:</strong> <em>' + item.recommendedAction + '</em>' : ''}${item.recommendedAction ? '<br><strong style="color:#059669">✅ Action:</strong> <em>' + item.recommendedAction + '</em>' : ''}</td></tr>`).join('')}
 </table>
 <hr style="border:none;border-top:2px solid #C9A84C;margin-top:40px">
 <p style="text-align:center;font-size:11px;color:#94a3b8">Draft for attorney review — not legal advice | Lexicon AI | ${ts}</p>
@@ -306,10 +305,10 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
   // ═══ EXCEL — CSV with structured data ═══
   if (format === 'csv') {
     const sevMap = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW', rec: 'RECOMMENDATION', finding: 'INFO' };
-    const rows = ['"Finding #","Severity","Priority","Title","Section Reference","Issue","Current Wording","Recommended Wording","Status","Assigned To","Due Date","Report Date"'];
+    const rows = ['"Finding #","Severity","Priority","Title","Section Reference","Issue","Recommended Action",,"Status","Assigned To","Due Date","Report Date"'];
     items.forEach((item, i) => {
       const priority = item.type === 'high' ? '1-Critical' : item.type === 'medium' ? '2-High' : item.type === 'low' ? '3-Medium' : '4-Low';
-      rows.push(`"${item.num || 'F-' + String(i+1).padStart(3,'0')}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${(item.section || '').replace(/"/g, '""')}","${(item.issue || item.body).replace(/"/g, '""')}","${(item.currentWording || '').replace(/"/g, '""')}","${(item.recommendedWording || '').replace(/"/g, '""')}","Open","","","${ts}"`);
+      rows.push(`"${item.num || 'F-' + String(i+1).padStart(3,'0')}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${(item.section || '').replace(/"/g, '""')}","${(item.issue || item.body).replace(/"/g, '""')}","${(item.recommendedAction || '').replace(/"/g, '""')}","${(item.recommendedAction || '').replace(/"/g, '""')}","Open","","","${ts}"`);
     });
     if (summary) rows.push(`"","SUMMARY","","Risk Summary","${summary.replace(/"/g, '""')}","","","","${ts}"`);
     if (actions) rows.push(`"","ACTIONS","","Key Actions","${actions.replace(/"/g, '""').replace(/\n/g, ' ')}","","","","${ts}"`);
@@ -334,13 +333,13 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
     const riskLabels = { high: 'HIGH RISK', medium: 'MEDIUM RISK', low: 'LOW RISK', rec: 'RECOMMENDATION', finding: 'FINDING' };
     const matched = [];
 
-    // For each finding with currentWording, highlight it in the document
-    const sortedItems = [...items].filter(i => i.currentWording && i.currentWording.length >= 5)
-      .sort((a, b) => b.currentWording.length - a.currentWording.length);
+    // For each finding with recommendedAction, highlight it in the document
+    const sortedItems = [...items].filter(i => i.recommendedAction && i.recommendedAction.length >= 5)
+      .sort((a, b) => b.recommendedAction.length - a.recommendedAction.length);
 
     sortedItems.forEach((item) => {
       // Escape the search text for HTML-escaped content
-      let searchText = item.currentWording.slice(0, 200)
+      let searchText = item.recommendedAction.slice(0, 200)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       let escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Allow line breaks between words
@@ -352,8 +351,8 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
           const bg = highlightBg[item.type];
           const border = highlightBorder[item.type];
           // Track change markup: highlight original + show recommended as insertion
-          const insertion = item.recommendedWording
-            ? `<span style="color:#059669;font-weight:600;background:#ECFDF5;padding:1px 4px;border-radius:2px;text-decoration:underline" title="RECOMMENDED: ${item.recommendedWording.replace(/"/g, '&quot;').slice(0,200)}">[INSERT: ${item.recommendedWording.slice(0,80)}${item.recommendedWording.length > 80 ? '…' : ''}]</span>`
+          const insertion = item.recommendedAction
+            ? `<span style="color:#059669;font-weight:600;background:#ECFDF5;padding:1px 4px;border-radius:2px;text-decoration:underline" title="RECOMMENDED: ${item.recommendedAction.replace(/"/g, '&quot;').slice(0,200)}">[INSERT: ${item.recommendedAction.slice(0,80)}${item.recommendedAction.length > 80 ? '…' : ''}]</span>`
             : '';
           docHtml = docHtml.replace(rx,
             `<span style="background:${bg};padding:1px 3px;border-bottom:2px solid ${border};position:relative" title="${item.num}: ${item.issue?.slice(0,100) || ''}">`
@@ -388,8 +387,8 @@ h2.sec { color: #0E2A52; font-size: 14pt; border-bottom: 2px solid #C9A84C; padd
 .finding-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10pt; }
 .finding-table td { padding: 8px 12px; vertical-align: top; border: 1px solid #e2e8f0; }
 .ft-label { width: 140px; font-weight: 700; color: #334155; background: #f8fafc; }
-.ft-current { background: #FEF2F2; }
-.ft-recommend { background: #ECFDF5; }
+.ft-action { background: #FEF2F2; }
+.ft-action { background: #ECFDF5; }
 .ft-header { padding: 10px 12px; font-weight: 700; font-size: 11pt; }
 .ft-high .ft-header { background: #DC2626; color: white; }
 .ft-medium .ft-header { background: #D97706; color: white; }
@@ -437,8 +436,8 @@ ${items.map((item, idx) => `
 ${item.reference ? `<tr><td class="ft-label">📌 Reference</td><td>${item.reference}</td></tr>` : ''}
 ${item.section ? `<tr><td class="ft-label">📄 Section</td><td>${item.section}</td></tr>` : ''}
 <tr><td class="ft-label">⚠️ Issue</td><td>${item.issue || item.body || ''}</td></tr>
-${item.currentWording ? `<tr class="ft-current"><td class="ft-label">⛔ Current Wording</td><td><em>"${item.currentWording}"</em></td></tr>` : ''}
-${item.recommendedWording ? `<tr class="ft-recommend"><td class="ft-label">✅ AI Recommendation</td><td><em>"${item.recommendedWording}"</em></td></tr>` : ''}
+${item.recommendedAction ? `<tr class="ft-action"><td class="ft-label">✅ Recommended Action</td><td><em>"${item.recommendedAction}"</em></td></tr>` : ''}
+${item.recommendedAction ? `<tr class="ft-action"><td class="ft-label">✅ Recommended Action</td><td><em>"${item.recommendedAction}"</em></td></tr>` : ''}
 <tr class="decision-row"><td class="ft-label">🏢 Decision</td><td>
 <b>☐ ACCEPT</b> — Use AI recommended wording &nbsp;&nbsp;
 <b>☐ REJECT</b> — Keep original wording &nbsp;&nbsp;
@@ -583,6 +582,11 @@ ${messages.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === '
 /* ─── MAIN APP ─── */
 export default function App() {
   const [tab, setTab] = useState('dashboard');
+  const [connStates, setConnStates] = useState(() => {
+    const s = {};
+    CONNECTORS.forEach(c => { s[c.name] = c.auto ? 'connected' : 'disconnected'; });
+    return s;
+  });
   const [area, setArea] = useState(null);
   const [skill, setSkill] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -644,12 +648,12 @@ For EACH finding, use this EXACT multi-line format (all 5 lines required):
 🔴 F-[NNN] | HIGH RISK | [Section Reference] — [Short Title]
 REFERENCE: [Section number, clause title, and specific paragraph/subsection location]
 ISSUE: [Clear description of the risk, referencing specific language from the document]
-CURRENT WORDING: "[Quote the exact problematic language from the document]"
-RECOMMENDED WORDING: "[Provide specific replacement language the legal team can adopt or reject]"
+RECOMMENDED ACTION: "[Quote the exact problematic language from the document]"
+RECOMMENDED ACTION: "[Provide specific replacement language the legal team can adopt or reject]"
 
 Use 🔴 for HIGH RISK, 🟡 for MEDIUM RISK, 🟢 for LOW RISK, 💡 for RECOMMENDATION, 📋 for FINDING.
 Number findings sequentially: F-001, F-002, F-003, etc.
-Every finding MUST include all 5 lines. For recommendations, CURRENT WORDING can be "N/A" and RECOMMENDED WORDING contains the suggested addition.
+Every finding MUST include all 3 lines (header, REFERENCE, ISSUE, RECOMMENDED ACTION). Be specific and actionable.
 
 ## RISK SUMMARY
 Write a professional executive summary (3-4 sentences): overall risk posture, the most critical exposure areas, and a clear accept/reject/negotiate recommendation. Include a one-line risk rating like "Overall Risk Rating: HIGH — significant commercial and legal exposure requiring negotiation before execution."
@@ -664,8 +668,7 @@ End with exactly: ---
 Draft for attorney review — not legal advice.
 
 QUALITY RULES:
-- Quote EXACT language from the document in CURRENT WORDING fields
-- RECOMMENDED WORDING must be specific enough to copy-paste into a redline
+- RECOMMENDED ACTION must be specific and actionable — concrete steps, not vague guidance
 - Reference section numbers, clause titles, and subsection identifiers
 - Include dollar amounts, dates, percentages when present in the document
 - Be precise: "Section 7.3, paragraph 2" not just "the IP section"
@@ -802,8 +805,8 @@ For each finding use this exact format:
 🔴 F-[NNN] | HIGH RISK | [Section/Clause] — [Short Title]
 REFERENCE: [Section number and clause title in the vendor document]
 ISSUE: [What's wrong — missing from vendor doc, non-compliant, weaker than org standard, etc.]
-CURRENT WORDING: "[Exact quote from the vendor/customer document]"
-RECOMMENDED WORDING: "[Specific replacement language aligned with org standard that the team can accept or reject]"
+RECOMMENDED ACTION: "[Exact quote from the vendor/customer document]"
+RECOMMENDED ACTION: "[Specific replacement language aligned with org standard that the team can accept or reject]"
 
 Severity guide:
 🔴 HIGH RISK — Material deviation from org standard, missing critical protections, non-compliant terms
@@ -846,68 +849,62 @@ Compare the vendor document against the organization standard. Identify every de
   /* ─── AGENT RUNNER ─── */
   const AGENT_CONFIGS = {
     renewal: {
-      name: 'Renewal Watcher',
+      name: 'Contract Renewal Watcher',
       icon: '📅',
       color: '#C9A84C',
-      desc: 'Scans your contract register for upcoming renewal and cancellation deadlines. Flags contracts requiring action in the next 30, 60, and 90 days.',
+      desc: 'Scans contract register nightly, alerts on renewal/cancel deadlines at 90/60/30 days.',
       sampleData: SAMPLE_CONTRACT_REGISTER,
       sampleLabel: '20 contracts with various deadlines',
       acceptTypes: '.csv,.xlsx,.txt',
-      prompt: (data) => `You are the Renewal Watcher managed agent. Analyze this contract register and produce a structured alert report.
+      prompt: (data) => `You are the Contract Renewal Watcher managed agent. Analyze this contract register and produce a structured alert report.
 
 Today's date is ${new Date().toISOString().split('T')[0]}.
 
-For each contract, calculate:
-- Days until expiration
-- Whether it auto-renews
-- Whether the cancel-notice window has passed or is approaching
-- Risk level based on value and timeline
+For each contract, calculate days until expiration, auto-renewal status, cancel-notice window status, and risk level.
 
 OUTPUT FORMAT:
 ## REPORT: Contract Renewal Alert — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
 
-For each contract needing attention, use:
+For each contract needing attention:
 🔴 F-[NNN] | HIGH RISK | [Contract ID] — [Title]
 REFERENCE: Contract [ID], [Vendor], expires [date], auto-renew: [Y/N], cancel notice: [days]
 ISSUE: [What's happening — approaching deadline, missed cancel window, etc.]
-CURRENT WORDING: "[Contract value and current terms]"
-RECOMMENDED WORDING: "[Specific action to take — cancel, renegotiate, extend, etc. with timeline]"
+RECOMMENDED ACTION: [Specific action — cancel, renegotiate, extend, with timeline]
 
-Use 🔴 for urgent (within 30 days or cancel window passed), 🟡 for approaching (30-90 days), 🟢 for monitoring (90+ days), 💡 for recommendations.
+Use 🔴 for urgent (within 30 days), 🟡 for approaching (30-90 days), 🟢 for monitoring (90+ days), 💡 for recommendations.
 
 ## RISK SUMMARY
-Executive summary of the portfolio health, total value at risk, and critical deadlines.
+Executive summary of portfolio health, total value at risk, and critical deadlines.
 
 ## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Contract ID] | [Issue] | [Action required with specific date]
+KA-[N] | [HIGH/MEDIUM/LOW] | [Contract ID] | [Issue] | [Action required with date]
 
 CONTRACT REGISTER DATA:
 ${data}`,
     },
     regmonitor: {
-      name: 'Reg Monitor',
+      name: 'Regulatory Change Monitor',
       icon: '📋',
-      color: '#8B6F47',
-      desc: 'Analyzes regulatory updates for impact on your organization. Produces a prioritized digest with compliance gap analysis and recommended actions.',
+      color: '#E8A838',
+      desc: 'Monitors regulatory updates across jurisdictions, produces weekly impact digest with compliance gap analysis.',
       sampleData: SAMPLE_REG_UPDATES,
       sampleLabel: '7 regulatory updates (SEC, FTC, HHS, DOJ, EU, CA, NY)',
       acceptTypes: '.txt,.csv,.pdf',
-      prompt: (data) => `You are the Regulatory Monitor managed agent. Analyze these regulatory updates and produce an impact assessment report for a multinational technology company operating in financial services, healthcare technology, and enterprise SaaS.
+      prompt: (data) => `You are the Regulatory Change Monitor managed agent. Analyze these regulatory updates and produce an impact assessment.
 
 OUTPUT FORMAT:
 ## REPORT: Regulatory Digest — Week of ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
 
-For each regulatory item, assess:
+For each regulatory item:
 🔴 F-[NNN] | HIGH RISK | [Agency/Regulator] — [Rule Title]
 REFERENCE: [Citation, effective date, comment deadline if applicable]
-ISSUE: [What this regulation requires, who it affects, and why it matters to our business]
-CURRENT WORDING: "[Key requirement or threshold from the regulation]"
-RECOMMENDED WORDING: "[Specific compliance action — policy update, process change, filing required, etc.]"
+ISSUE: [What this regulation requires and why it matters]
+RECOMMENDED ACTION: [Specific compliance action — policy update, process change, filing required]
 
-Use 🔴 for immediate action required, 🟡 for planning needed, 🟢 for monitoring, 💡 for strategic recommendations.
+Use 🔴 for immediate action, 🟡 for planning needed, 🟢 for monitoring, 💡 for strategic recommendations.
 
 ## RISK SUMMARY
-Overall regulatory landscape assessment, most impactful changes, and resource implications.
+Overall regulatory landscape assessment.
 
 ## KEY ACTIONS
 KA-[N] | [HIGH/MEDIUM/LOW] | [Regulation reference] | [Gap identified] | [Compliance action with deadline]
@@ -915,41 +912,94 @@ KA-[N] | [HIGH/MEDIUM/LOW] | [Regulation reference] | [Gap identified] | [Compli
 REGULATORY DATA:
 ${data}`,
     },
-    launchradar: {
-      name: 'Launch Radar',
-      icon: '🚀',
-      color: '#5B9BD5',
-      desc: 'Reviews pending product launches for legal risk. Assesses privacy, regulatory, IP, and commercial exposure before go-live.',
-      sampleData: SAMPLE_LAUNCH_ITEMS,
-      sampleLabel: '5 product launches pending legal review',
-      acceptTypes: '.txt,.csv',
-      prompt: (data) => `You are the Launch Radar managed agent. Analyze these pending product launches and produce a legal risk assessment for each. You are reviewing for a multinational technology company.
+    lithold: {
+      name: 'Litigation Hold Enforcer',
+      icon: '🏛️',
+      color: '#D4726A',
+      desc: 'Tracks preservation obligations, sends custodian reminders, monitors compliance across active holds.',
+      sampleData: SAMPLE_LIT_HOLDS,
+      sampleLabel: '6 active litigation holds with custodian data',
+      acceptTypes: '.csv,.xlsx,.txt',
+      prompt: (data) => `You are the Litigation Hold Enforcer managed agent. Analyze active litigation holds and produce a compliance status report.
 
-Assess each launch for:
-- Privacy/data protection risks (GDPR, CCPA, BIPA, HIPAA)
-- AI/algorithmic risks (EU AI Act, FTC guidance, state laws)
-- Consumer protection risks
-- Employment law risks
-- IP risks
-- Regulatory compliance risks
+For each hold, assess: custodian acknowledgment status, last reminder date, data source coverage, hold scope adequacy, and spoliation risk.
 
 OUTPUT FORMAT:
-## REPORT: Launch Radar — Legal Risk Assessment
+## REPORT: Litigation Hold Compliance — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
 
-For each launch item:
-🔴 F-[NNN] | HIGH RISK | [Launch ID] — [Product Name]
-REFERENCE: [Launch ID, target date, risk flags identified]
-ISSUE: [Specific legal risk with regulatory citations]
-CURRENT WORDING: "[Current product/feature description that creates risk]"
-RECOMMENDED WORDING: "[Specific mitigation — what needs to change before launch, required disclosures, consent mechanisms, etc.]"
+For each hold requiring attention:
+🔴 F-[NNN] | HIGH RISK | [Hold ID] — [Matter Name]
+REFERENCE: [Hold ID, issue date, custodian count, data sources]
+ISSUE: [Compliance gap — unacknowledged custodians, missing sources, stale reminders]
+RECOMMENDED ACTION: [Send reminder, escalate to GC, expand scope, etc.]
 
 ## RISK SUMMARY
-Portfolio-level launch risk assessment. Which launches can proceed, which need holds, which need modifications.
+Portfolio-level hold compliance assessment and spoliation risk.
 
 ## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Launch ID] | [Risk area] | [Required action before launch with specific recommendation]
+KA-[N] | [HIGH/MEDIUM/LOW] | [Hold ID] | [Issue] | [Required action with deadline]
 
-LAUNCH DATA:
+LITIGATION HOLD DATA:
+${data}`,
+    },
+    privlog: {
+      name: 'Privilege Log Auditor',
+      icon: '🔒',
+      color: '#4ECDC4',
+      desc: 'Continuously audits privilege designations for consistency, flags clawback risk and waiver exposure.',
+      sampleData: SAMPLE_PRIV_LOG,
+      sampleLabel: '15 privilege log entries for audit',
+      acceptTypes: '.csv,.xlsx,.txt',
+      prompt: (data) => `You are the Privilege Log Auditor managed agent. Audit these privilege log entries for consistency and risk.
+
+Check each entry for: proper basis cited, description adequacy, holder/recipient consistency, subject matter overlap with produced documents, potential waiver issues, and clawback candidates.
+
+OUTPUT FORMAT:
+## REPORT: Privilege Log Audit — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+
+For each issue found:
+🔴 F-[NNN] | HIGH RISK | [Doc ID] — [Description]
+REFERENCE: [Doc ID, privilege basis, date, parties]
+ISSUE: [Inconsistency, waiver risk, or clawback concern]
+RECOMMENDED ACTION: [Re-designate, supplement description, assert clawback, etc.]
+
+## RISK SUMMARY
+Overall privilege log health and waiver exposure.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Doc ID] | [Issue] | [Required action]
+
+PRIVILEGE LOG DATA:
+${data}`,
+    },
+    ocspend: {
+      name: 'Outside Counsel Spend Tracker',
+      icon: '💰',
+      color: '#6BAF8D',
+      desc: 'Monitors outside counsel invoices against budgets, flags rate overages, duplicate charges, and billing guideline violations.',
+      sampleData: SAMPLE_OC_SPEND,
+      sampleLabel: '12 invoices across 4 firms',
+      acceptTypes: '.csv,.xlsx,.txt',
+      prompt: (data) => `You are the Outside Counsel Spend Tracker managed agent. Analyze these invoices against budgets and billing guidelines.
+
+Check each invoice for: budget adherence, rate compliance, duplicate entries, block billing, excessive research time, staffing leverage, and billing guideline violations.
+
+OUTPUT FORMAT:
+## REPORT: Outside Counsel Spend Analysis — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+
+For each issue found:
+🔴 F-[NNN] | HIGH RISK | [Firm] — [Matter]
+REFERENCE: [Invoice #, period, amount, budget remaining]
+ISSUE: [Overage, rate violation, duplicate, guideline breach]
+RECOMMENDED ACTION: [Reduce invoice, request credit, adjust budget, escalate]
+
+## RISK SUMMARY
+Portfolio spend health, budget burn rate, and projected overages.
+
+## KEY ACTIONS
+KA-[N] | [HIGH/MEDIUM/LOW] | [Invoice/Firm] | [Issue] | [Required action with amount]
+
+INVOICE DATA:
 ${data}`,
     },
   };
@@ -965,7 +1015,7 @@ ${data}`,
     try {
       const text = await chatAPI({
         messages: [{ role: 'user', content: userPrompt }],
-        system: 'You are a managed legal agent. Follow the output format exactly. Every finding must use the structured F-NNN format with all 5 required lines (header, REFERENCE, ISSUE, CURRENT WORDING, RECOMMENDED WORDING). Be specific and actionable. End with: ---\nDraft for attorney review — not legal advice.',
+        system: 'You are a managed legal agent. Follow the output format exactly. Every finding must use the structured F-NNN format with all 3 required lines (header, REFERENCE, ISSUE, RECOMMENDED ACTION). Be specific and actionable. End with: ---\nDraft for attorney review — not legal advice.',
       });
       setAgentResults(prev => ({ ...prev, [agentId]: { text, time: new Date(), data: customData ? 'Custom upload' : 'Sample data' } }));
     } catch (err) {
@@ -1054,9 +1104,9 @@ ${data}`,
                   { n: PRACTICE_AREAS.length, l: 'Practice Areas', icon: '📋', color: '#C9A84C' },
                   { n: totalSkills, l: 'AI Skills', icon: '⚡', color: '#5B9BD5' },
                   { n: MANAGED_AGENTS.length, l: 'Managed Agents', icon: '🤖', color: '#4ECDC4' },
-                  { n: `${CONNECTORS.length}+`, l: 'MCP Connectors', icon: '🔗', color: '#B07CC6' },
+                  { n: `${CONNECTORS.length}`, l: 'MCP Connectors', icon: '🔗', color: '#B07CC6' },
                   { n: SAMPLE_DOCS.length, l: 'Sample Docs', icon: '📄', color: '#6BAF8D' },
-                  { n: VULN_REPORT.length, l: 'Security Checks', icon: '🛡️', color: '#D4726A' },
+                  { n: OWASP_CHECKS.reduce((a,c) => a + c.items.length, 0), l: 'Security Checks', icon: '🛡️', color: '#D4726A' },
                 ].map((s, i) => (
                   <div key={i} className={`hero-stat animate-in stagger-${i + 1}`}>
                     <span className="hero-stat-icon" style={{ '--glow': s.color }}>{s.icon}</span>
@@ -1106,7 +1156,7 @@ ${data}`,
                   { icon: '🤖', title: 'Managed Agents', desc: 'Autonomous agents scan contracts, regulatory feeds, and launches — deliver structured reports', color: '#4ECDC4' },
                   { icon: '📊', title: 'One-Click Export', desc: 'PDF with title page, Word for redlining, PowerPoint for leadership, Excel for tracking', color: '#5B9BD5' },
                   { icon: '🎯', title: 'Risk Report Cards', desc: 'Color-coded HIGH/MEDIUM/LOW with Key Actions table and executive risk summary', color: '#B07CC6' },
-                  { icon: '🔗', title: `${CONNECTORS.length}+ Integrations`, desc: 'Ironclad, DocuSign, iManage, Everlaw, CourtListener, Slack, Jira, and more', color: '#6BAF8D' },
+                  { icon: '🔗', title: `${CONNECTORS.length} MCP Connectors`, desc: `${CONNECTORS.filter(c => c.auto).length} auto-configured, ${CONNECTORS.filter(c => !c.auto).length} available to connect`, color: '#6BAF8D' },
                 ].map((f, i) => (
                   <div key={i} className="feature-card" style={{ '--fcolor': f.color }}>
                     <div className="feature-icon-wrap">
@@ -1374,8 +1424,8 @@ ${data}`,
                                 </div>
                                 {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
                                 {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
-                                {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
-                                {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
+                                {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
+                                {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
                                 {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
                               </div>
                             ))}
@@ -1650,8 +1700,8 @@ ${data}`,
                               </div>
                               {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
                               {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
-                              {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
-                              {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
+                              {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
+                              {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
                               {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
                             </div>
                           ))}
@@ -1878,7 +1928,7 @@ ${data}`,
                   <p>MCP (Model Context Protocol) Connections are integrations that let the AI agent talk directly to the software your legal team already uses. Instead of copy-pasting between systems, the AI can read from and write to your existing tools securely.</p>
                   <p className="guide-what"><strong>Why it matters:</strong></p>
                   <p>Without MCP, you'd upload a contract manually, wait for analysis, then manually copy the results into your CLM. With MCP, the AI pulls the contract from Ironclad, analyzes it, and posts the review memo back — all in one workflow.</p>
-                  <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}+):</strong></p>
+                  <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}):</strong></p>
                   <div className="guide-connectors-grid">
                     {CONNECTORS.map((c, i) => (
                       <span key={i} className="guide-connector-chip">{c}</span>
@@ -1939,14 +1989,14 @@ ${data}`,
           <div className="fade-wrapper visible">
             <section className="hero-card" style={{ marginBottom: 24 }}>
               <div className="hero-content">
-                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Security & Vulnerability Audit</h2>
+                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>🛡️ OWASP Security Assessment</h2>
                 <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
-                  Comprehensive scan of the Claude for Legal codebase — scripts, deployment manifests, MCP configurations, skill files, and agent orchestration patterns.
+                  Security posture mapped against OWASP Top 10 for Web, LLM, and Agentic/MCP frameworks.
                 </p>
                 <div className="vuln-summary">
                   {[
-                    { label: 'Passed', count: VULN_REPORT.filter(v => v.status === 'pass').length, color: 'var(--green)' },
-                    { label: 'Warnings', count: VULN_REPORT.filter(v => v.status === 'warn').length, color: 'var(--orange)' },
+                    { label: 'Passed', count: OWASP_CHECKS.reduce((a, c) => a + c.items.filter(i => i.status === 'pass').length, 0), color: 'var(--green)' },
+                    { label: 'Advisory', count: OWASP_CHECKS.reduce((a, c) => a + c.items.filter(i => i.status === 'warn').length, 0), color: 'var(--orange)' },
                     { label: 'Critical', count: 0, color: 'var(--red)' },
                   ].map((s, i) => (
                     <div key={i} className="vuln-stat">
@@ -1958,27 +2008,31 @@ ${data}`,
               </div>
             </section>
 
-            <div className="vuln-list">
-              {VULN_REPORT.map((v, i) => (
-                <div key={i} className={`vuln-item vuln-${v.severity}`}>
-                  <div className="vuln-badges">
-                    <span className={`badge badge-${v.status}`}>{v.status === 'pass' ? '✓ PASS' : '⚠ WARN'}</span>
-                    <span className={`badge badge-sev-${v.severity}`}>{v.severity}</span>
-                  </div>
-                  <div className="vuln-title">{v.title}</div>
-                  <div className="vuln-desc">{v.desc}</div>
+            {OWASP_CHECKS.map((section, si) => (
+              <div key={si} style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, fontFamily: 'var(--font-heading)' }}>{section.cat}</h3>
+                <div className="vuln-list">
+                  {section.items.map((item, ii) => (
+                    <div key={ii} className={`vuln-item vuln-${item.status === 'pass' ? 'low' : 'medium'}`}>
+                      <div className="vuln-badges">
+                        <span className={`badge badge-${item.status}`}>{item.status === 'pass' ? '✓ PASS' : '⚠ ADVISORY'}</span>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', fontSize: 10 }}>{item.code}</span>
+                      </div>
+                      <div className="vuln-title">{item.name}</div>
+                      <div className="vuln-desc">{item.fix}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
 
             <div className="assessment-box">
               <div className="assessment-title">Overall Assessment</div>
               <p className="assessment-text">
-                The codebase demonstrates strong security practices: closed-schema intents prevent prompt injection escalation,
-                input validation hardens shell scripts, YAML parsing uses safe_load exclusively, no hardcoded secrets were detected,
-                and matter isolation maintains privilege boundaries. The three warnings are acknowledged by the authors and represent
-                defense-in-depth gaps rather than critical vulnerabilities. Overall: production-ready with recommended hardening for
-                audit log integrity and MCP TLS pinning.
+                The platform demonstrates strong security across all three OWASP frameworks. Closed-schema intents prevent prompt injection,
+                workspace isolation enforces access boundaries, and all MCP connectors use scoped OAuth permissions. The four advisory items
+                represent defense-in-depth recommendations (rate limiting, append-only logs, TLS certificate pinning) rather than active vulnerabilities.
+                Overall: production-ready with recommended hardening.
               </p>
             </div>
           </div>
