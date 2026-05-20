@@ -601,6 +601,7 @@ export default function App() {
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
+  const [skillTypeFilter, setSkillTypeFilter] = useState(null);
   const [lastDocContent, setLastDocContent] = useState('');
   const [chatHistory, setChatHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lexicon-chat-history') || '[]'); } catch { return []; }
@@ -649,49 +650,123 @@ export default function App() {
     setInput('');
     setLoading(true);
 
-    const sys = `You are a senior legal AI assistant for a high-profile in-house legal team. You provide specific, actionable analysis with exact wording recommendations that the legal team can accept or reject.
+    // Determine skill type for adaptive prompt
+    const skillType = skill?.skillType || 'review'; // default to review if no skill selected
 
-RULES:
-1. ANALYZE the actual content NOW. Never describe what you would do — do it.
-2. Never ask to proceed. Deliver the full analysis immediately.
-3. Content between --- UPLOADED FILE --- markers IS the document. Read every section.
-
-OUTPUT FORMAT — use these exact markers. The UI parses them into a structured report:
-
+    // Build type-specific output format instructions
+    const OUTPUT_FORMATS = {
+      review: `OUTPUT FORMAT — DOCUMENT REVIEW (Current Wording → Recommended Wording):
 ## REPORT: [Document Name] Analysis
 
 For EACH finding, use this EXACT multi-line format (all 5 lines required):
-
 🔴 F-[NNN] | HIGH RISK | [Section Reference] — [Short Title]
 REFERENCE: [Section number, clause title, and specific paragraph/subsection location]
 ISSUE: [Clear description of the risk, referencing specific language from the document]
 CURRENT WORDING: "[Quote the exact problematic language from the document]"
 RECOMMENDED WORDING: "[Provide specific replacement language the legal team can adopt or reject]"
 
-Use 🔴 for HIGH RISK, 🟡 for MEDIUM RISK, 🟢 for LOW RISK, 💡 for RECOMMENDATION, 📋 for FINDING.
+Use 🔴 for HIGH RISK, 🟡 for MEDIUM RISK, 🟢 for LOW RISK, 💡 for RECOMMENDATION.
 Number findings sequentially: F-001, F-002, F-003, etc.
-Every finding MUST include all 5 lines. For recommendations, CURRENT WORDING can be "N/A" and RECOMMENDED WORDING contains the suggested addition.
+Every finding MUST include all 5 lines. Quote EXACT language in CURRENT WORDING. Provide copy-paste-ready replacement in RECOMMENDED WORDING.`,
 
+      gap: `OUTPUT FORMAT — GAP ANALYSIS (Identify Gaps → Remediation Plan):
+## REPORT: [Subject] Gap Analysis
+
+For EACH gap identified:
+🔴 F-[NNN] | HIGH RISK | [Area/Requirement] — [Gap Title]
+REFERENCE: [Regulation, standard, or policy reference]
+ISSUE: [What is missing, non-compliant, or inadequate]
+CURRENT WORDING: "N/A — gap identified"
+RECOMMENDED WORDING: "[Specific remediation action with owner and timeline suggestion]"
+
+Include a REMEDIATION PRIORITY MATRIX at the end ranking gaps by risk × effort.
+Focus on: what's missing, what doesn't meet the standard, what needs to be added.`,
+
+      generate: `OUTPUT FORMAT — DOCUMENT GENERATION:
+Generate the requested document in full, ready for review. Include:
+- Proper formatting, headers, section numbering
+- Jurisdiction-appropriate language where relevant
+- Placeholders in [BRACKETS] for client-specific information
+- Professional tone appropriate for the document type
+
+After the document, add:
+## REVIEW NOTES
+List 3-5 items the attorney should verify before finalizing:
+💡 F-[NNN] | REVIEW NOTE | [What to check] — [Why it matters]
+REFERENCE: [Section of the generated document]
+ISSUE: [What the attorney should verify or customize]
+CURRENT WORDING: "N/A"
+RECOMMENDED WORDING: "[Suggested customization or verification step]"`,
+
+      track: `OUTPUT FORMAT — STATUS TRACKING & MONITORING:
+## REPORT: [Subject] Status Report
+
+Provide a structured status dashboard:
+
+📊 SUMMARY DASHBOARD
+- Total items tracked: [N]
+- Items requiring action: [N]
+- Overdue items: [N]
+- Upcoming deadlines (next 30 days): [N]
+
+For each item requiring attention:
+🔴 F-[NNN] | [URGENCY] | [Item Reference] — [Status Issue]
+REFERENCE: [What item, contract, filing, or deadline]
+ISSUE: [What needs attention and why — deadline, overdue, missing action]
+CURRENT WORDING: "[Current status or data point]"
+RECOMMENDED WORDING: "[Recommended action with specific timeline]"
+
+Sort by urgency: overdue first, then upcoming deadlines, then informational.`,
+
+      interactive: `OUTPUT FORMAT — CONVERSATIONAL RESPONSE:
+Respond conversationally and helpfully. This is an interactive skill — engage in back-and-forth dialogue.
+
+Structure your response clearly with:
+- Direct answers to questions asked
+- Follow-up questions if more information is needed
+- Actionable next steps
+- Relevant considerations the user should be aware of
+
+If the conversation involves analysis, use bullet points and clear sections.
+If drilling/quizzing, maintain the Socratic method — ask, don't tell.
+If intake/interview, gather information systematically.
+
+Do NOT use the F-NNN finding format unless the user specifically asks for a formal report.`,
+
+      setup: `This is a setup/configuration skill. Help the user configure their practice profile or workspace.
+Ask questions to understand their needs, then provide structured configuration recommendations.
+Do NOT use the F-NNN finding format.`,
+    };
+
+    const outputFormat = OUTPUT_FORMATS[skillType] || OUTPUT_FORMATS.review;
+
+    const sys = `You are a senior legal AI assistant for a high-profile in-house legal team. You provide specific, actionable analysis.
+
+RULES:
+1. ANALYZE the actual content NOW. Never describe what you would do — do it.
+2. Never ask to proceed. Deliver the full analysis immediately.
+3. Content between --- UPLOADED FILE --- markers IS the document. Read every section.
+
+${outputFormat}
+
+${skillType === 'review' || skillType === 'gap' || skillType === 'track' ? `
 ## RISK SUMMARY
-Write a professional executive summary (3-4 sentences): overall risk posture, the most critical exposure areas, and a clear accept/reject/negotiate recommendation. Include a one-line risk rating like "Overall Risk Rating: HIGH — significant commercial and legal exposure requiring negotiation before execution."
+Write a professional executive summary (3-4 sentences): overall risk posture, the most critical exposure areas, and a clear recommendation.
 
 ## KEY ACTIONS
-For each action use this exact format:
-KA-[N] | [HIGH/MEDIUM/LOW] | [Section reference] | [What needs to change] | [Specific recommendation with proposed wording or approach]
-
-Number actions KA-1, KA-2, etc. Order by priority (highest risk first). Each action must reference the finding number (F-NNN) it relates to.
+For each action: KA-[N] | [HIGH/MEDIUM/LOW] | [Reference] | [What needs to change] | [Specific recommendation]
+Number actions KA-1, KA-2, etc. Order by priority.
 
 End with exactly: ---
-Draft for attorney review — not legal advice.
+Draft for attorney review — not legal advice.` : ''}
 
 QUALITY RULES:
-- Quote EXACT language from the document in CURRENT WORDING fields
-- RECOMMENDED WORDING must be specific enough to copy-paste into a redline
 - Reference section numbers, clause titles, and subsection identifiers
-- Include dollar amounts, dates, percentages when present in the document
-- Be precise: "Section 7.3, paragraph 2" not just "the IP section"
+- Include dollar amounts, dates, percentages when present
+- Be precise and specific in all analysis
+${skillType === 'review' ? '- Quote EXACT language from the document in CURRENT WORDING fields\n- RECOMMENDED WORDING must be specific enough to copy-paste into a redline' : ''}
 
-${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc + '. Apply this methodology.' : ''}
+${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc + '. Skill type: ' + skillType + '. Apply this methodology.' : ''}
 ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
 
     try {
@@ -1302,6 +1377,23 @@ ${data}`,
                   </button>
                 ))}
               </div>
+              <div className="type-filter-row">
+                <span style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'var(--font-body)', marginRight: 8 }}>Filter by type:</span>
+                {[
+                  { key: null, label: 'All Types' },
+                  { key: 'review', label: '📝 Review', color: '#F87171' },
+                  { key: 'gap', label: '🔍 Gap Analysis', color: '#A78BFA' },
+                  { key: 'generate', label: '📄 Generate', color: '#4ADE80' },
+                  { key: 'track', label: '📊 Track', color: '#FBBF24' },
+                  { key: 'interactive', label: '💬 Interactive', color: '#60A5FA' },
+                ].map(t => (
+                  <button key={t.key || 'all'} className={`filter-chip ${skillTypeFilter === t.key ? 'filter-active' : ''}`}
+                    style={{ fontSize: 10, padding: '4px 10px', '--chip-color': t.color }}
+                    onClick={() => setSkillTypeFilter(skillTypeFilter === t.key ? null : t.key)}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Skills List */}
@@ -1371,7 +1463,7 @@ ${data}`,
                 <div className="skill-panel">
                   {(search ? filtered : (area ? [area] : PRACTICE_AREAS)).map(a =>
                     a.skills
-                      .filter(s => !s.tag || s.tag !== 'setup' || search)
+                      .filter(s => (!s.tag || s.tag !== 'setup' || search) && (!skillTypeFilter || s.skillType === skillTypeFilter))
                       .map((s, si) => (
                         <div key={`${a.id}-${s.id}`} className={`skill-item ${skill?.id === s.id ? 'active' : ''}`}
                           onClick={() => setSkill(s)}>
@@ -1379,7 +1471,7 @@ ${data}`,
                           {(search || !area) && <span className="skill-area-badge" style={{ background: a.color + '22', color: a.color }}>{a.icon} {a.name}</span>}
                           <div className="skill-dot" style={{ background: a.color }} />
                           <div className="skill-info">
-                            <div className="skill-name">{s.name} {s.tag === 'setup' && <span className="skill-setup-tag">SETUP</span>}</div>
+                            <div className="skill-name">{s.name} {s.skillType && <span className={`skill-type-badge skill-type-${s.skillType}`}>{s.skillType}</span>}</div>
                             <div className="skill-desc">{s.desc}</div>
                           </div>
                           <button className="btn btn-gold btn-sm" onClick={(e) => {
@@ -1579,7 +1671,7 @@ ${data}`,
                 <div className="sidebar-title">ACTIVE SKILL</div>
                 {skill ? (
                   <div className="active-skill-card">
-                    <div className="skill-name">{skill.name}</div>
+                    <div className="skill-name">{skill.name} {skill.skillType && <span className={`skill-type-badge skill-type-${skill.skillType}`}>{skill.skillType}</span>}</div>
                     <div className="skill-desc">{skill.desc}</div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setSkill(null)} style={{ marginTop: 10 }}>✕ Clear</button>
                   </div>
