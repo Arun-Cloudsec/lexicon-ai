@@ -1622,6 +1622,21 @@ ${data}`,
                         ))}
                       </div>
                     )}
+
+                    {/* Sample Documents for Testing */}
+                    <div className="sample-docs-section">
+                      <div className="sidebar-title" style={{ marginTop: 16 }}>📄 SAMPLE DOCUMENTS</div>
+                      <p className="mode-desc" style={{ marginBottom: 8 }}>Click to auto-load document + skill for testing</p>
+                      {SAMPLE_DOCS.map((doc, i) => (
+                        <div key={i} className="sample-doc-card" onClick={() => launchDocTest(doc, 'review')}>
+                          <div className="sample-doc-info">
+                            <div className="sample-doc-name">{doc.name}</div>
+                            {doc.skillName && <span className="sample-doc-skill">🎯 {doc.skillName}</span>}
+                          </div>
+                          <span className="sample-doc-load">Load →</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
