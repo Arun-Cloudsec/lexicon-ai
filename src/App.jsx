@@ -602,6 +602,9 @@ export default function App() {
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
   const [lastDocContent, setLastDocContent] = useState('');
+  const [chatHistory, setChatHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lexicon-chat-history') || '[]'); } catch { return []; }
+  });
   const chatEnd = useRef(null);
   const fileRef = useRef(null);
   const agentFileRef = useRef(null);
@@ -692,8 +695,8 @@ ${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc + '. Apply this
 ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
 
     try {
-      const history = msgs.filter(m => m.role === 'user' || m.role === 'assistant').slice(-8)
-        .map(m => ({ role: m.role, content: m.text }));
+      const history = msgs.filter(m => (m.role === 'user' || m.role === 'assistant') && m.text && m.text.trim()).slice(-8)
+        .map(m => ({ role: m.role, content: m.text || '.' }));
       const text = await chatAPI({ messages: [...history, { role: 'user', content: promptContent }], system: sys });
       setMsgs(prev => [...prev, { role: 'assistant', text, time: new Date() }]);
     } catch (err) {
@@ -816,6 +819,61 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
   }, []);
 
   const onDrop = useCallback((e) => { e.preventDefault(); onFiles(e.dataTransfer.files); }, [onFiles]);
+
+  /* ─── CHAT SESSION MANAGEMENT ─── */
+  const saveSession = () => {
+    if (msgs.length === 0) return;
+    const session = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      skill: skill?.name || 'General',
+      preview: msgs.find(m => m.role === 'user')?.text?.slice(0, 80) || 'Session',
+      msgCount: msgs.length,
+      msgs: msgs.slice(0, 50), // limit stored messages
+    };
+    const updated = [session, ...chatHistory].slice(0, 20); // keep last 20 sessions
+    setChatHistory(updated);
+    try { localStorage.setItem('lexicon-chat-history', JSON.stringify(updated)); } catch {}
+  };
+
+  const clearChat = () => {
+    if (msgs.length > 0) saveSession(); // auto-save before clearing
+    setMsgs([]);
+    setLastDocContent('');
+  };
+
+  const loadSession = (session) => {
+    if (msgs.length > 0) saveSession(); // save current before loading
+    setMsgs(session.msgs || []);
+  };
+
+  const deleteSession = (id) => {
+    const updated = chatHistory.filter(s => s.id !== id);
+    setChatHistory(updated);
+    try { localStorage.setItem('lexicon-chat-history', JSON.stringify(updated)); } catch {}
+  };
+
+  /* ─── LAUNCH FROM DOCS — auto-select skill + load document ─── */
+  const launchDocTest = (doc, mode) => {
+    // Find and set the matching skill
+    if (doc.skillId) {
+      const matchedSkill = PRACTICE_AREAS.flatMap(a => a.skills).find(s => s.id === doc.skillId);
+      if (matchedSkill) setSkill(matchedSkill);
+    }
+    // Set the mode
+    setAgentMode(mode || 'review');
+    // Switch to AI Agent tab
+    setTab('agent');
+
+    if (mode === 'compare') {
+      // Load doc as vendor doc for Compare & Comply
+      setVendorDoc({ name: doc.filename, ext: 'TXT', content: doc.content, reading: false });
+    } else {
+      // Load as regular file for Skill Review
+      setFiles([{ name: doc.filename, ext: 'TXT', content: doc.content, reading: false, size: (doc.content.length / 1024).toFixed(1) + ' KB' }]);
+      setInput(`Analyze this "${doc.name}" document using the ${doc.skillName || 'active'} skill.`);
+    }
+  };
 
   /* ─── DOCUMENT COMPARISON READER ─── */
   const readDocFile = (file, setter) => {
@@ -1645,7 +1703,24 @@ ${data}`,
             <div className="chat-main">
               <div className="chat-header">
                 <span className="chat-title">⚖ Legal AI Assistant</span>
-                {msgs.length > 0 && <button className="btn btn-ghost btn-sm" onClick={() => setMsgs([])}>Clear Chat</button>}
+                {msgs.length > 0 && <button className="btn btn-ghost btn-sm" onClick={clearChat} style={{ color: '#F87171' }}>🗑 Clear & Save</button>}
+                <div className="history-dropdown">
+                  <button className="btn btn-ghost btn-sm" onClick={() => document.getElementById('history-panel')?.classList.toggle('show')}>📜 History ({chatHistory.length})</button>
+                  <div id="history-panel" className="history-panel">
+                    <div className="history-title">Chat Sessions</div>
+                    {chatHistory.length === 0 && <p style={{ color: 'var(--text-dim)', fontSize: 12, padding: '8px 12px' }}>No saved sessions yet</p>}
+                    {chatHistory.map(s => (
+                      <div key={s.id} className="history-item">
+                        <div className="history-item-info" onClick={() => { loadSession(s); document.getElementById('history-panel')?.classList.remove('show'); }}>
+                          <span className="history-skill">{s.skill}</span>
+                          <span className="history-preview">{s.preview}</span>
+                          <span className="history-meta">{new Date(s.date).toLocaleDateString()} • {s.msgCount} msgs</span>
+                        </div>
+                        <button className="history-delete" onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="chat-messages">
@@ -1839,12 +1914,35 @@ ${data}`,
                       const d = SAMPLE_DOCS[docIdx];
                       downloadBlob(new Blob([d.content], { type: 'text/plain' }), d.filename);
                     }}>⬇ Download</button>
-                    <button className="btn btn-ghost" onClick={() => {
-                      setTab('agent');
-                      setInput(`Analyze this "${SAMPLE_DOCS[docIdx].name}" document and provide a detailed legal review.`);
-                    }}>🤖 Analyze with AI</button>
                   </div>
                 </div>
+                {SAMPLE_DOCS[docIdx].skillName && (
+                  <div className="doc-skill-bar">
+                    <span className="doc-skill-label">Linked Skill:</span>
+                    <span className="doc-skill-name">{SAMPLE_DOCS[docIdx].skillName}</span>
+                    <div className="doc-test-buttons">
+                      <button className="btn btn-gold btn-sm" onClick={() => launchDocTest(SAMPLE_DOCS[docIdx], 'review')}>
+                        📄 Test — Skill Review
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => launchDocTest(SAMPLE_DOCS[docIdx], 'compare')}>
+                        ⚖ Test — Compare & Comply
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!SAMPLE_DOCS[docIdx].skillName && (
+                  <div className="doc-skill-bar">
+                    <div className="doc-test-buttons">
+                      <button className="btn btn-gold btn-sm" onClick={() => {
+                        setTab('agent');
+                        setFiles([{ name: SAMPLE_DOCS[docIdx].filename, ext: 'TXT', content: SAMPLE_DOCS[docIdx].content, reading: false, size: '—' }]);
+                        setInput(`Analyze this "${SAMPLE_DOCS[docIdx].name}" document.`);
+                      }}>
+                        🤖 Analyze with AI
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <pre className="doc-preview">{SAMPLE_DOCS[docIdx].content}</pre>
               </div>
             </div>

@@ -2,6 +2,7 @@ export const SAMPLE_DOCS = [
   {
     name: "Mutual Non-Disclosure Agreement",
     type: "contract",
+    skillId: "nda-review", skillName: "NDA Triager", mode: "review",
     filename: "Sample-Mutual-NDA.txt",
     content: `MUTUAL NON-DISCLOSURE AGREEMENT
 
@@ -49,6 +50,7 @@ Date:                                  Date:`,
   {
     name: "DSAR Response Template",
     type: "privacy",
+    skillId: "dsar-response", skillName: "DSAR Responder", mode: "review",
     filename: "Sample-DSAR-Response.txt",
     content: `DATA SUBJECT ACCESS REQUEST (DSAR) RESPONSE TEMPLATE
 
@@ -99,6 +101,7 @@ SECTION 6: INTERNAL NOTES (PRIVILEGED)
   {
     name: "Legal Hold Notice",
     type: "litigation",
+    skillId: "legal-hold", skillName: "Legal Hold Manager", mode: "review",
     filename: "Sample-Legal-Hold-Notice.txt",
     content: `LEGAL HOLD NOTICE - PRIVILEGED & CONFIDENTIAL
 
