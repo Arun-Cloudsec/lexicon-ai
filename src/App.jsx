@@ -651,7 +651,11 @@ export default function App() {
     setLoading(true);
 
     // Determine skill type for adaptive prompt
-    const skillType = skill?.skillType || 'review'; // default to review if no skill selected
+    // Determine skill type — from skill if selected, or detect from context
+    const skillType = skill?.skillType || (
+      files.length > 0 ? 'review' :  // document uploaded = probably review
+      'interactive'  // no document = conversational
+    ); // default to review if no skill selected
 
     // Build type-specific output format instructions
     const OUTPUT_FORMATS = {
@@ -946,7 +950,16 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
     } else {
       // Load as regular file for Skill Review
       setFiles([{ name: doc.filename, ext: 'TXT', content: doc.content, reading: false, size: (doc.content.length / 1024).toFixed(1) + ' KB' }]);
-      setInput(`Analyze this "${doc.name}" document using the ${doc.skillName || 'active'} skill.`);
+      // Set prompt based on skill type
+      const matchedType = matchedSkill?.skillType || 'review';
+      const typePrompts = {
+        review: `Review this "${doc.name}" document using the ${doc.skillName || 'active'} skill. Identify risks, quote current wording, and provide recommended replacement wording.`,
+        gap: `Analyze this "${doc.name}" for compliance gaps using the ${doc.skillName || 'active'} skill. Identify what's missing, non-compliant, or inadequate.`,
+        generate: `Using the ${doc.skillName || 'active'} skill, generate/draft the appropriate document based on this "${doc.name}". Create the full document ready for review.`,
+        track: `Using the ${doc.skillName || 'active'} skill, scan this "${doc.name}" and provide a status report with items requiring action and upcoming deadlines.`,
+        interactive: `I'd like to work through this "${doc.name}" using the ${doc.skillName || 'active'} skill. Guide me through the process.`,
+      };
+      setInput(typePrompts[matchedType] || typePrompts.review);
     }
   };
 
@@ -1355,6 +1368,43 @@ ${data}`,
               <div className="rankings-header-content">
                 <h1 className="rankings-title">Practice Area Rankings</h1>
                 <p className="rankings-subtitle">{PRACTICE_AREAS.length} areas • {totalSkills} AI skills • Click any area to explore</p>
+              </div>
+            </div>
+
+            {/* Skill Type Legend */}
+            <div className="type-legend">
+              <div className="type-legend-title">Skill Types — AI adapts its output format based on the type</div>
+              <div className="type-legend-grid">
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-review">review</span>
+                  <div className="type-legend-name">Document Review</div>
+                  <div className="type-legend-desc">Reads your document, quotes exact problematic language, and provides copy-paste replacement wording you can accept or reject</div>
+                </div>
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-gap">gap</span>
+                  <div className="type-legend-name">Gap Analysis</div>
+                  <div className="type-legend-desc">Compares against a standard or regulation, identifies what's missing or non-compliant, and provides a remediation plan with owners</div>
+                </div>
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-generate">generate</span>
+                  <div className="type-legend-name">Document Generation</div>
+                  <div className="type-legend-desc">Creates new documents from scratch — drafts, letters, memos, notices, consents — with proper formatting and placeholders</div>
+                </div>
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-track">track</span>
+                  <div className="type-legend-name">Tracking & Monitoring</div>
+                  <div className="type-legend-desc">Scans registers and data, reports status dashboards with overdue items, upcoming deadlines, and required actions</div>
+                </div>
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-interactive">interactive</span>
+                  <div className="type-legend-name">Interactive Q&A</div>
+                  <div className="type-legend-desc">Conversational back-and-forth — interviews, Socratic drills, case intake, matter queries, and guided assessments</div>
+                </div>
+                <div className="type-legend-card">
+                  <span className="skill-type-badge skill-type-setup">setup</span>
+                  <div className="type-legend-name">Setup & Config</div>
+                  <div className="type-legend-desc">Onboarding interviews, practice customization, workspace management — configures how other skills behave</div>
+                </div>
               </div>
             </div>
 

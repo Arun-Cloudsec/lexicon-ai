@@ -687,3 +687,12 @@
 
 /* ─── TYPE FILTER ROW ─── */
 .type-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.04); }
+
+/* ─── TYPE LEGEND ─── */
+.type-legend { margin-bottom: 28px; padding: 20px 24px; background: rgba(7,28,60,0.4); border: 1px solid rgba(255,255,255,0.04); border-radius: 16px; }
+.type-legend-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--gold); letter-spacing: 1px; margin-bottom: 14px; }
+.type-legend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.type-legend-card { padding: 12px 14px; border-radius: 10px; background: rgba(2,15,42,0.5); border: 1px solid rgba(255,255,255,0.04); }
+.type-legend-name { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 6px 0 4px; }
+.type-legend-desc { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+@media (max-width: 768px) { .type-legend-grid { grid-template-columns: 1fr 1fr; } }
