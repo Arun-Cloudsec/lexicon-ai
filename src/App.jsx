@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import mammoth from 'mammoth';
 import PptxGenJS from 'pptxgenjs';
-import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS, OWASP_CHECKS } from './data/practiceAreas.js';
-import { SAMPLE_DOCS } from './data/documents.js';
-import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LIT_HOLDS, SAMPLE_PRIV_LOG, SAMPLE_OC_SPEND } from './data/agentData.js';
+import { PRACTICE_AREAS, MANAGED_AGENTS, CONNECTORS } from './data/practiceAreas.js';
+import { SAMPLE_DOCS, VULN_REPORT } from './data/documents.js';
+import { SAMPLE_CONTRACT_REGISTER, SAMPLE_REG_UPDATES, SAMPLE_LAUNCH_ITEMS } from './data/agentData.js';
 import { COMPARE_PAIRS } from './data/comparePairs.js';
 import './App.css';
 
@@ -51,7 +51,7 @@ function parseReport(text) {
       if (oldMatch) {
         if (currentItem) items.push(currentItem);
         const typeMap = { '🔴': 'high', '🟡': 'medium', '🟢': 'low', '💡': 'rec', '📋': 'finding' };
-        currentItem = { type: typeMap[oldMatch[1]] || 'finding', num: '', title: oldMatch[2].split('—')[0]?.trim(), body: oldMatch[2], reference: '', issue: '', recommendedAction: '' };
+        currentItem = { type: typeMap[oldMatch[1]] || 'finding', num: '', title: oldMatch[2].split('—')[0]?.trim(), body: oldMatch[2], reference: '', issue: '', currentWording: '', recommendedWording: '' };
       } else if (currentItem && t) {
         currentItem.body += ' ' + t;
       }
@@ -71,7 +71,7 @@ function parseReport(text) {
     const title = sectionTitle.slice(1).join('—').trim() || section;
 
     const getField = (label) => {
-      const rx = new RegExp(label + ':\\s*(.+?)(?=\\n(?:REFERENCE|ISSUE|RECOMMENDED ACTION|🔴|🟡|🟢|💡|📋|##|---|$))', 's');
+      const rx = new RegExp(label + ':\\s*(.+?)(?=\\n(?:REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING|🔴|🟡|🟢|💡|📋|##|---|$))', 's');
       const m = block.match(rx);
       return m ? m[1].trim().replace(/^[""]|[""]$/g, '') : '';
     };
@@ -83,8 +83,9 @@ function parseReport(text) {
       section,
       reference: getField('REFERENCE'),
       issue: getField('ISSUE'),
-      recommendedAction: getField('RECOMMENDED ACTION'),
-      body: getField('ISSUE') || block.split('\n').slice(1).map(l => l.trim()).filter(l => l && !l.match(/^(REFERENCE|ISSUE|RECOMMENDED ACTION):/)).join(' '),
+      currentWording: getField('CURRENT WORDING'),
+      recommendedWording: getField('RECOMMENDED WORDING'),
+      body: getField('ISSUE') || block.split('\n').slice(1).map(l => l.trim()).filter(l => l && !l.match(/^(REFERENCE|ISSUE|CURRENT WORDING|RECOMMENDED WORDING):/)).join(' '),
     });
   }
   return items;
@@ -152,7 +153,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#0E2A52;line-height:1.5}
 .dash-card{padding:20px;border-radius:10px;text-align:center;border:1px solid #e2e8f0}
 .dash-card .num{font-size:36px;font-weight:700}
 .dash-card .lbl{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
-.dash-card-high{background:#ECFDF5;border-color:#FECACA}.dash-card-high .num{color:#DC2626}
+.dash-card-high{background:#FEF2F2;border-color:#FECACA}.dash-card-high .num{color:#DC2626}
 .dash-card-medium{background:#FFFBEB;border-color:#FDE68A}.dash-card-medium .num{color:#D97706}
 .dash-card-low{background:#ECFDF5;border-color:#A7F3D0}.dash-card-low .num{color:#059669}
 .dash-card-rec{background:#EFF6FF;border-color:#BFDBFE}.dash-card-rec .num{color:#2563EB}
@@ -176,7 +177,7 @@ body{font-family:Calibri,'Segoe UI',sans-serif;color:#0E2A52;line-height:1.5}
 .findings{padding:48px;max-width:900px;margin:0 auto}
 .findings h2{font-size:22px;color:#0E2A52;border-bottom:3px solid #C9A84C;padding-bottom:10px;margin-bottom:20px}
 .item{padding:16px 20px;margin:12px 0;border-radius:10px;border-left:5px solid;page-break-inside:avoid}
-.item-high{border-color:#DC2626;background:#ECFDF5}
+.item-high{border-color:#DC2626;background:#FEF2F2}
 .item-medium{border-color:#D97706;background:#FFFBEB}
 .item-low{border-color:#059669;background:#ECFDF5}
 .item-rec{border-color:#2563EB;background:#EFF6FF}
@@ -233,7 +234,7 @@ ${kas.map(ka => `<tr class="ka-${ka.severity.toLowerCase().includes('high') ? 'h
 <div class="page-break"></div>
 <div class="findings">
 <h2>Detailed Findings (${totalFindings})</h2>
-${items.map((item, idx) => `<div class="item item-${item.type}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><span style="font-size:12px;color:#C9A84C;font-weight:700;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</span></div><h3>${item.title}</h3>${item.reference ? '<p style="font-size:12px;color:#5B9BD5;margin:2px 0">📌 ' + item.section + (item.reference ? ' — ' + item.reference : '') + '</p>' : ''}${item.issue ? '<p style="margin:6px 0"><strong>Issue:</strong> ' + item.issue + '</p>' : (item.body ? '<p>' + item.body + '</p>' : '')}${item.recommendedAction ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#DC2626">✅ Recommended Action:</strong> <em>"' + item.recommendedAction + '"</em></div>' : ''}${item.recommendedAction ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#059669">✅ Recommended Action:</strong> <em>"' + item.recommendedAction + '"</em></div>' : ''}</div>`).join('')}
+${items.map((item, idx) => `<div class="item item-${item.type}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span><span style="font-size:12px;color:#C9A84C;font-weight:700;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</span></div><h3>${item.title}</h3>${item.reference ? '<p style="font-size:12px;color:#5B9BD5;margin:2px 0">📌 ' + item.section + (item.reference ? ' — ' + item.reference : '') + '</p>' : ''}${item.issue ? '<p style="margin:6px 0"><strong>Issue:</strong> ' + item.issue + '</p>' : (item.body ? '<p>' + item.body + '</p>' : '')}${item.currentWording ? '<div style="background:#FEF2F2;padding:8px 12px;border-radius:6px;border-left:3px solid #DC2626;margin:6px 0;font-size:13px"><strong style="color:#DC2626">⛔ Current Wording:</strong> <em>"' + item.currentWording + '"</em></div>' : ''}${item.recommendedWording ? '<div style="background:#ECFDF5;padding:8px 12px;border-radius:6px;border-left:3px solid #059669;margin:6px 0;font-size:13px"><strong style="color:#059669">✅ Recommended Wording:</strong> <em>"' + item.recommendedWording + '"</em></div>' : ''}</div>`).join('')}
 </div>
 <div class="footer">CONFIDENTIAL — Draft for attorney review — not legal advice<br>Lexicon AI — Legal Intelligence Platform | Generated ${ts}</div>
 </body></html>`;
@@ -265,7 +266,7 @@ h2{font-size:20px;color:#0E2A52;margin-top:24px;border-bottom:2px solid #E5E1D8;
 table{border-collapse:collapse;width:100%;margin:16px 0}
 td,th{border:1px solid #ddd;padding:10px 14px;font-size:13px}
 th{background:#0E2A52;color:white;font-weight:700;text-align:left}
-.high{background:#ECFDF5;border-left:4px solid #DC2626}
+.high{background:#FEF2F2;border-left:4px solid #DC2626}
 .medium{background:#FFFBEB;border-left:4px solid #D97706}
 .low{background:#ECFDF5;border-left:4px solid #059669}
 .rec{background:#EFF6FF;border-left:4px solid #2563EB}
@@ -294,7 +295,7 @@ ${(() => { const kas = parseKeyActions(text); return kas.length > 0 ? `<h3>Key A
 <h2>Detailed Findings (${totalFindings})</h2>
 <table>
 <tr><th style="width:60px">#</th><th style="width:90px">Severity</th><th style="width:160px">Finding</th><th style="width:160px">Reference</th><th>Issue & Recommendation</th></tr>
-${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</td><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td style="font-size:12px;color:#5B9BD5">${item.section || ''}${item.reference ? '<br>' + item.reference : ''}</td><td>${item.issue || item.body}${item.recommendedAction ? '<br><br><strong style="color:#DC2626">✅ Action:</strong> <em>' + item.recommendedAction + '</em>' : ''}${item.recommendedAction ? '<br><strong style="color:#059669">✅ Action:</strong> <em>' + item.recommendedAction + '</em>' : ''}</td></tr>`).join('')}
+${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;color:#C9A84C;font-family:monospace">${item.num || 'F-' + String(idx+1).padStart(3,'0')}</td><td><span class="badge" style="background:${sevColors[item.type]}">${sevLabels[item.type]}</span></td><td style="font-weight:700">${item.title}</td><td style="font-size:12px;color:#5B9BD5">${item.section || ''}${item.reference ? '<br>' + item.reference : ''}</td><td>${item.issue || item.body}${item.currentWording ? '<br><br><strong style="color:#DC2626">⛔ Current:</strong> <em>' + item.currentWording + '</em>' : ''}${item.recommendedWording ? '<br><strong style="color:#059669">✅ Recommended:</strong> <em>' + item.recommendedWording + '</em>' : ''}</td></tr>`).join('')}
 </table>
 <hr style="border:none;border-top:2px solid #C9A84C;margin-top:40px">
 <p style="text-align:center;font-size:11px;color:#94a3b8">Draft for attorney review — not legal advice | Lexicon AI | ${ts}</p>
@@ -305,10 +306,10 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
   // ═══ EXCEL — CSV with structured data ═══
   if (format === 'csv') {
     const sevMap = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW', rec: 'RECOMMENDATION', finding: 'INFO' };
-    const rows = ['"Finding #","Severity","Priority","Title","Section Reference","Issue","Recommended Action",,"Status","Assigned To","Due Date","Report Date"'];
+    const rows = ['"Finding #","Severity","Priority","Title","Section Reference","Issue","Current Wording","Recommended Wording","Status","Assigned To","Due Date","Report Date"'];
     items.forEach((item, i) => {
       const priority = item.type === 'high' ? '1-Critical' : item.type === 'medium' ? '2-High' : item.type === 'low' ? '3-Medium' : '4-Low';
-      rows.push(`"${item.num || 'F-' + String(i+1).padStart(3,'0')}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${(item.section || '').replace(/"/g, '""')}","${(item.issue || item.body).replace(/"/g, '""')}","${(item.recommendedAction || '').replace(/"/g, '""')}","${(item.recommendedAction || '').replace(/"/g, '""')}","Open","","","${ts}"`);
+      rows.push(`"${item.num || 'F-' + String(i+1).padStart(3,'0')}","${sevMap[item.type]}","${priority}","${item.title.replace(/"/g, '""')}","${(item.section || '').replace(/"/g, '""')}","${(item.issue || item.body).replace(/"/g, '""')}","${(item.currentWording || '').replace(/"/g, '""')}","${(item.recommendedWording || '').replace(/"/g, '""')}","Open","","","${ts}"`);
     });
     if (summary) rows.push(`"","SUMMARY","","Risk Summary","${summary.replace(/"/g, '""')}","","","","${ts}"`);
     if (actions) rows.push(`"","ACTIONS","","Key Actions","${actions.replace(/"/g, '""').replace(/\n/g, ' ')}","","","","${ts}"`);
@@ -333,13 +334,13 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
     const riskLabels = { high: 'HIGH RISK', medium: 'MEDIUM RISK', low: 'LOW RISK', rec: 'RECOMMENDATION', finding: 'FINDING' };
     const matched = [];
 
-    // For each finding with recommendedAction, highlight it in the document
-    const sortedItems = [...items].filter(i => i.recommendedAction && i.recommendedAction.length >= 5)
-      .sort((a, b) => b.recommendedAction.length - a.recommendedAction.length);
+    // For each finding with currentWording, highlight it in the document
+    const sortedItems = [...items].filter(i => i.currentWording && i.currentWording.length >= 5)
+      .sort((a, b) => b.currentWording.length - a.currentWording.length);
 
     sortedItems.forEach((item) => {
       // Escape the search text for HTML-escaped content
-      let searchText = item.recommendedAction.slice(0, 200)
+      let searchText = item.currentWording.slice(0, 200)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       let escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Allow line breaks between words
@@ -351,8 +352,8 @@ ${items.map((item, idx) => `<tr class="${item.type}"><td style="font-weight:700;
           const bg = highlightBg[item.type];
           const border = highlightBorder[item.type];
           // Track change markup: highlight original + show recommended as insertion
-          const insertion = item.recommendedAction
-            ? `<span style="color:#059669;font-weight:600;background:#ECFDF5;padding:1px 4px;border-radius:2px;text-decoration:underline" title="RECOMMENDED: ${item.recommendedAction.replace(/"/g, '&quot;').slice(0,200)}">[INSERT: ${item.recommendedAction.slice(0,80)}${item.recommendedAction.length > 80 ? '…' : ''}]</span>`
+          const insertion = item.recommendedWording
+            ? `<span style="color:#059669;font-weight:600;background:#ECFDF5;padding:1px 4px;border-radius:2px;text-decoration:underline" title="RECOMMENDED: ${item.recommendedWording.replace(/"/g, '&quot;').slice(0,200)}">[INSERT: ${item.recommendedWording.slice(0,80)}${item.recommendedWording.length > 80 ? '…' : ''}]</span>`
             : '';
           docHtml = docHtml.replace(rx,
             `<span style="background:${bg};padding:1px 3px;border-bottom:2px solid ${border};position:relative" title="${item.num}: ${item.issue?.slice(0,100) || ''}">`
@@ -387,8 +388,8 @@ h2.sec { color: #0E2A52; font-size: 14pt; border-bottom: 2px solid #C9A84C; padd
 .finding-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10pt; }
 .finding-table td { padding: 8px 12px; vertical-align: top; border: 1px solid #e2e8f0; }
 .ft-label { width: 140px; font-weight: 700; color: #334155; background: #f8fafc; }
-.ft-action { background: #FEF2F2; }
-.ft-action { background: #ECFDF5; }
+.ft-current { background: #FEF2F2; }
+.ft-recommend { background: #ECFDF5; }
 .ft-header { padding: 10px 12px; font-weight: 700; font-size: 11pt; }
 .ft-high .ft-header { background: #DC2626; color: white; }
 .ft-medium .ft-header { background: #D97706; color: white; }
@@ -436,8 +437,8 @@ ${items.map((item, idx) => `
 ${item.reference ? `<tr><td class="ft-label">📌 Reference</td><td>${item.reference}</td></tr>` : ''}
 ${item.section ? `<tr><td class="ft-label">📄 Section</td><td>${item.section}</td></tr>` : ''}
 <tr><td class="ft-label">⚠️ Issue</td><td>${item.issue || item.body || ''}</td></tr>
-${item.recommendedAction ? `<tr class="ft-action"><td class="ft-label">✅ Recommended Action</td><td><em>"${item.recommendedAction}"</em></td></tr>` : ''}
-${item.recommendedAction ? `<tr class="ft-action"><td class="ft-label">✅ Recommended Action</td><td><em>"${item.recommendedAction}"</em></td></tr>` : ''}
+${item.currentWording ? `<tr class="ft-current"><td class="ft-label">⛔ Current Wording</td><td><em>"${item.currentWording}"</em></td></tr>` : ''}
+${item.recommendedWording ? `<tr class="ft-recommend"><td class="ft-label">✅ AI Recommendation</td><td><em>"${item.recommendedWording}"</em></td></tr>` : ''}
 <tr class="decision-row"><td class="ft-label">🏢 Decision</td><td>
 <b>☐ ACCEPT</b> — Use AI recommended wording &nbsp;&nbsp;
 <b>☐ REJECT</b> — Keep original wording &nbsp;&nbsp;
@@ -582,11 +583,6 @@ ${messages.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === '
 /* ─── MAIN APP ─── */
 export default function App() {
   const [tab, setTab] = useState('dashboard');
-  const [connStates, setConnStates] = useState(() => {
-    const s = {};
-    CONNECTORS.forEach(c => { s[c.name] = c.auto ? 'connected' : 'disconnected'; });
-    return s;
-  });
   const [area, setArea] = useState(null);
   const [skill, setSkill] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -602,10 +598,6 @@ export default function App() {
   const [authError, setAuthError] = useState(false);
   const [agentRunning, setAgentRunning] = useState(null);
   const [agentResults, setAgentResults] = useState({});
-  const [mcpTestResults, setMcpTestResults] = useState({});
-  const [mcpTesting, setMcpTesting] = useState(null);
-  const [mcpFilter, setMcpFilter] = useState('all');
-  const [mcpExpanded, setMcpExpanded] = useState(null);
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
@@ -628,11 +620,29 @@ export default function App() {
     const userMsg = { role: 'user', text: input, files: files.map(f => f.name), time: new Date() };
     setMsgs(prev => [...prev, userMsg]);
     const fileContents = files
-      .filter(f => f.content && f.content !== '[Binary file — content not readable as text]')
+      .filter(f => f.content && f.content !== '[Binary file — content not readable as text]' && !f.imageData)
       .map(f => `\n\n--- UPLOADED FILE: ${f.name} ---\n${f.content}\n--- END FILE ---`)
       .join('');
     const fileNames = files.length > 0 ? '\n[Attached files: ' + files.map(f => f.name).join(', ') + ']' : '';
-    const prompt = (input + fileNames + fileContents).trim() || 'Please analyze the attached document(s).';
+    const promptText = (input + fileNames + fileContents).trim() || 'Please analyze the attached document(s).';
+
+    // Build content — if images present, use multimodal array format
+    const imageFiles = files.filter(f => f.imageData);
+    let promptContent;
+    if (imageFiles.length > 0) {
+      promptContent = [];
+      // Add images first
+      imageFiles.forEach(img => {
+        promptContent.push({
+          type: 'image',
+          source: { type: 'base64', media_type: img.imageData.mediaType, data: img.imageData.base64 }
+        });
+      });
+      // Add text prompt
+      promptContent.push({ type: 'text', text: promptText });
+    } else {
+      promptContent = promptText;
+    }
     setInput('');
     setLoading(true);
 
@@ -652,12 +662,12 @@ For EACH finding, use this EXACT multi-line format (all 5 lines required):
 🔴 F-[NNN] | HIGH RISK | [Section Reference] — [Short Title]
 REFERENCE: [Section number, clause title, and specific paragraph/subsection location]
 ISSUE: [Clear description of the risk, referencing specific language from the document]
-RECOMMENDED ACTION: "[Quote the exact problematic language from the document]"
-RECOMMENDED ACTION: "[Provide specific replacement language the legal team can adopt or reject]"
+CURRENT WORDING: "[Quote the exact problematic language from the document]"
+RECOMMENDED WORDING: "[Provide specific replacement language the legal team can adopt or reject]"
 
 Use 🔴 for HIGH RISK, 🟡 for MEDIUM RISK, 🟢 for LOW RISK, 💡 for RECOMMENDATION, 📋 for FINDING.
 Number findings sequentially: F-001, F-002, F-003, etc.
-Every finding MUST include all 3 lines (header, REFERENCE, ISSUE, RECOMMENDED ACTION). Be specific and actionable.
+Every finding MUST include all 5 lines. For recommendations, CURRENT WORDING can be "N/A" and RECOMMENDED WORDING contains the suggested addition.
 
 ## RISK SUMMARY
 Write a professional executive summary (3-4 sentences): overall risk posture, the most critical exposure areas, and a clear accept/reject/negotiate recommendation. Include a one-line risk rating like "Overall Risk Rating: HIGH — significant commercial and legal exposure requiring negotiation before execution."
@@ -672,7 +682,8 @@ End with exactly: ---
 Draft for attorney review — not legal advice.
 
 QUALITY RULES:
-- RECOMMENDED ACTION must be specific and actionable — concrete steps, not vague guidance
+- Quote EXACT language from the document in CURRENT WORDING fields
+- RECOMMENDED WORDING must be specific enough to copy-paste into a redline
 - Reference section numbers, clause titles, and subsection identifiers
 - Include dollar amounts, dates, percentages when present in the document
 - Be precise: "Section 7.3, paragraph 2" not just "the IP section"
@@ -683,7 +694,7 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
     try {
       const history = msgs.filter(m => m.role === 'user' || m.role === 'assistant').slice(-8)
         .map(m => ({ role: m.role, content: m.text }));
-      const text = await chatAPI({ messages: [...history, { role: 'user', content: prompt }], system: sys });
+      const text = await chatAPI({ messages: [...history, { role: 'user', content: promptContent }], system: sys });
       setMsgs(prev => [...prev, { role: 'assistant', text, time: new Date() }]);
     } catch (err) {
       setMsgs(prev => [...prev, { role: 'assistant', text: `⚠ ${err.message}`, time: new Date() }]);
@@ -703,6 +714,7 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         size: (f.size / 1024).toFixed(1) + ' KB',
         ext: ext.toUpperCase(),
         content: null,
+        imageData: null, // base64 for images
         reading: true,
       };
       setFiles(prev => [...prev, meta]);
@@ -711,6 +723,14 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         setFiles(prev => prev.map(file =>
           file.name === f.name && file.reading
             ? { ...file, content: text.slice(0, 50000), reading: false }
+            : file
+        ));
+      };
+
+      const updateImage = (base64, mediaType) => {
+        setFiles(prev => prev.map(file =>
+          file.name === f.name && file.reading
+            ? { ...file, content: '[Image: ' + f.name + ']', imageData: { base64, mediaType }, reading: false }
             : file
         ));
       };
@@ -741,6 +761,46 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         reader.onerror = () => markFailed('[Failed to read file]');
         reader.readAsArrayBuffer(f);
       }
+      // PDF — extract text using pdf.js
+      else if (ext === 'pdf') {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const pdfjsLib = await import('pdfjs-dist');
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map(item => item.str).join(' ');
+              fullText += `\n--- Page ${i} ---\n${pageText}`;
+            }
+            if (fullText.trim().length > 0) {
+              updateContent(fullText);
+            } else {
+              // If no text extracted, it might be a scanned PDF — read as image
+              markFailed('[Scanned PDF — no extractable text. Try uploading individual pages as images for OCR analysis.]');
+            }
+          } catch (err) {
+            markFailed('[Failed to extract text from PDF: ' + err.message + ']');
+          }
+        };
+        reader.onerror = () => markFailed('[Failed to read PDF]');
+        reader.readAsArrayBuffer(f);
+      }
+      // Images — read as base64 for Claude Vision
+      else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          const base64 = dataUrl.split(',')[1];
+          const mediaType = f.type || ('image/' + (ext === 'jpg' ? 'jpeg' : ext));
+          updateImage(base64, mediaType);
+        };
+        reader.onerror = () => markFailed('[Failed to read image]');
+        reader.readAsDataURL(f);
+      }
       // Plain text formats — read directly
       else if (['txt','csv','md','json','xml','html','htm','yaml','yml','log','tsv','rtf','eml'].includes(ext)) {
         const reader = new FileReader();
@@ -748,9 +808,9 @@ ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
         reader.onerror = () => markFailed('[Failed to read file]');
         reader.readAsText(f);
       }
-      // Binary files — flag as unreadable
+      // Other binary files
       else {
-        markFailed('[Binary file (' + ext.toUpperCase() + ') — text extraction not supported in browser. For PDFs, please copy-paste the text or use a .txt/.docx version.]');
+        markFailed('[Binary file (' + ext.toUpperCase() + ') — text extraction not supported. Try PDF, DOCX, TXT, or image formats.]');
       }
     });
   }, []);
@@ -800,7 +860,7 @@ RULES:
 1. Go clause by clause through the vendor document
 2. Compare each clause against the org standard
 3. Identify: missing clauses, non-compliant language, weaker protections, missing definitions, unfavorable terms
-4. For each finding, provide the issue description and your RECOMMENDED ACTION
+4. For each finding, provide the EXACT current wording and your RECOMMENDED replacement wording
 
 OUTPUT FORMAT:
 ## REPORT: Document Comparison — ${vendorDoc.name} vs ${orgDoc.name}
@@ -809,8 +869,8 @@ For each finding use this exact format:
 🔴 F-[NNN] | HIGH RISK | [Section/Clause] — [Short Title]
 REFERENCE: [Section number and clause title in the vendor document]
 ISSUE: [What's wrong — missing from vendor doc, non-compliant, weaker than org standard, etc.]
-RECOMMENDED ACTION: "[Exact quote from the vendor/customer document]"
-RECOMMENDED ACTION: "[Specific replacement language aligned with org standard that the team can accept or reject]"
+CURRENT WORDING: "[Exact quote from the vendor/customer document]"
+RECOMMENDED WORDING: "[Specific replacement language aligned with org standard that the team can accept or reject]"
 
 Severity guide:
 🔴 HIGH RISK — Material deviation from org standard, missing critical protections, non-compliant terms
@@ -853,62 +913,68 @@ Compare the vendor document against the organization standard. Identify every de
   /* ─── AGENT RUNNER ─── */
   const AGENT_CONFIGS = {
     renewal: {
-      name: 'Contract Renewal Watcher',
+      name: 'Renewal Watcher',
       icon: '📅',
       color: '#C9A84C',
-      desc: 'Scans contract register nightly, alerts on renewal/cancel deadlines at 90/60/30 days.',
+      desc: 'Scans your contract register for upcoming renewal and cancellation deadlines. Flags contracts requiring action in the next 30, 60, and 90 days.',
       sampleData: SAMPLE_CONTRACT_REGISTER,
       sampleLabel: '20 contracts with various deadlines',
       acceptTypes: '.csv,.xlsx,.txt',
-      prompt: (data) => `You are the Contract Renewal Watcher managed agent. Analyze this contract register and produce a structured alert report.
+      prompt: (data) => `You are the Renewal Watcher managed agent. Analyze this contract register and produce a structured alert report.
 
 Today's date is ${new Date().toISOString().split('T')[0]}.
 
-For each contract, calculate days until expiration, auto-renewal status, cancel-notice window status, and risk level.
+For each contract, calculate:
+- Days until expiration
+- Whether it auto-renews
+- Whether the cancel-notice window has passed or is approaching
+- Risk level based on value and timeline
 
 OUTPUT FORMAT:
 ## REPORT: Contract Renewal Alert — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
 
-For each contract needing attention:
+For each contract needing attention, use:
 🔴 F-[NNN] | HIGH RISK | [Contract ID] — [Title]
 REFERENCE: Contract [ID], [Vendor], expires [date], auto-renew: [Y/N], cancel notice: [days]
 ISSUE: [What's happening — approaching deadline, missed cancel window, etc.]
-RECOMMENDED ACTION: [Specific action — cancel, renegotiate, extend, with timeline]
+CURRENT WORDING: "[Contract value and current terms]"
+RECOMMENDED WORDING: "[Specific action to take — cancel, renegotiate, extend, etc. with timeline]"
 
-Use 🔴 for urgent (within 30 days), 🟡 for approaching (30-90 days), 🟢 for monitoring (90+ days), 💡 for recommendations.
+Use 🔴 for urgent (within 30 days or cancel window passed), 🟡 for approaching (30-90 days), 🟢 for monitoring (90+ days), 💡 for recommendations.
 
 ## RISK SUMMARY
-Executive summary of portfolio health, total value at risk, and critical deadlines.
+Executive summary of the portfolio health, total value at risk, and critical deadlines.
 
 ## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Contract ID] | [Issue] | [Action required with date]
+KA-[N] | [HIGH/MEDIUM/LOW] | [Contract ID] | [Issue] | [Action required with specific date]
 
 CONTRACT REGISTER DATA:
 ${data}`,
     },
     regmonitor: {
-      name: 'Regulatory Change Monitor',
+      name: 'Reg Monitor',
       icon: '📋',
-      color: '#E8A838',
-      desc: 'Monitors regulatory updates across jurisdictions, produces weekly impact digest with compliance gap analysis.',
+      color: '#8B6F47',
+      desc: 'Analyzes regulatory updates for impact on your organization. Produces a prioritized digest with compliance gap analysis and recommended actions.',
       sampleData: SAMPLE_REG_UPDATES,
       sampleLabel: '7 regulatory updates (SEC, FTC, HHS, DOJ, EU, CA, NY)',
       acceptTypes: '.txt,.csv,.pdf',
-      prompt: (data) => `You are the Regulatory Change Monitor managed agent. Analyze these regulatory updates and produce an impact assessment.
+      prompt: (data) => `You are the Regulatory Monitor managed agent. Analyze these regulatory updates and produce an impact assessment report for a multinational technology company operating in financial services, healthcare technology, and enterprise SaaS.
 
 OUTPUT FORMAT:
 ## REPORT: Regulatory Digest — Week of ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
 
-For each regulatory item:
+For each regulatory item, assess:
 🔴 F-[NNN] | HIGH RISK | [Agency/Regulator] — [Rule Title]
 REFERENCE: [Citation, effective date, comment deadline if applicable]
-ISSUE: [What this regulation requires and why it matters]
-RECOMMENDED ACTION: [Specific compliance action — policy update, process change, filing required]
+ISSUE: [What this regulation requires, who it affects, and why it matters to our business]
+CURRENT WORDING: "[Key requirement or threshold from the regulation]"
+RECOMMENDED WORDING: "[Specific compliance action — policy update, process change, filing required, etc.]"
 
-Use 🔴 for immediate action, 🟡 for planning needed, 🟢 for monitoring, 💡 for strategic recommendations.
+Use 🔴 for immediate action required, 🟡 for planning needed, 🟢 for monitoring, 💡 for strategic recommendations.
 
 ## RISK SUMMARY
-Overall regulatory landscape assessment.
+Overall regulatory landscape assessment, most impactful changes, and resource implications.
 
 ## KEY ACTIONS
 KA-[N] | [HIGH/MEDIUM/LOW] | [Regulation reference] | [Gap identified] | [Compliance action with deadline]
@@ -916,94 +982,41 @@ KA-[N] | [HIGH/MEDIUM/LOW] | [Regulation reference] | [Gap identified] | [Compli
 REGULATORY DATA:
 ${data}`,
     },
-    lithold: {
-      name: 'Litigation Hold Enforcer',
-      icon: '🏛️',
-      color: '#D4726A',
-      desc: 'Tracks preservation obligations, sends custodian reminders, monitors compliance across active holds.',
-      sampleData: SAMPLE_LIT_HOLDS,
-      sampleLabel: '6 active litigation holds with custodian data',
-      acceptTypes: '.csv,.xlsx,.txt',
-      prompt: (data) => `You are the Litigation Hold Enforcer managed agent. Analyze active litigation holds and produce a compliance status report.
+    launchradar: {
+      name: 'Launch Radar',
+      icon: '🚀',
+      color: '#5B9BD5',
+      desc: 'Reviews pending product launches for legal risk. Assesses privacy, regulatory, IP, and commercial exposure before go-live.',
+      sampleData: SAMPLE_LAUNCH_ITEMS,
+      sampleLabel: '5 product launches pending legal review',
+      acceptTypes: '.txt,.csv',
+      prompt: (data) => `You are the Launch Radar managed agent. Analyze these pending product launches and produce a legal risk assessment for each. You are reviewing for a multinational technology company.
 
-For each hold, assess: custodian acknowledgment status, last reminder date, data source coverage, hold scope adequacy, and spoliation risk.
-
-OUTPUT FORMAT:
-## REPORT: Litigation Hold Compliance — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-
-For each hold requiring attention:
-🔴 F-[NNN] | HIGH RISK | [Hold ID] — [Matter Name]
-REFERENCE: [Hold ID, issue date, custodian count, data sources]
-ISSUE: [Compliance gap — unacknowledged custodians, missing sources, stale reminders]
-RECOMMENDED ACTION: [Send reminder, escalate to GC, expand scope, etc.]
-
-## RISK SUMMARY
-Portfolio-level hold compliance assessment and spoliation risk.
-
-## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Hold ID] | [Issue] | [Required action with deadline]
-
-LITIGATION HOLD DATA:
-${data}`,
-    },
-    privlog: {
-      name: 'Privilege Log Auditor',
-      icon: '🔒',
-      color: '#4ECDC4',
-      desc: 'Continuously audits privilege designations for consistency, flags clawback risk and waiver exposure.',
-      sampleData: SAMPLE_PRIV_LOG,
-      sampleLabel: '15 privilege log entries for audit',
-      acceptTypes: '.csv,.xlsx,.txt',
-      prompt: (data) => `You are the Privilege Log Auditor managed agent. Audit these privilege log entries for consistency and risk.
-
-Check each entry for: proper basis cited, description adequacy, holder/recipient consistency, subject matter overlap with produced documents, potential waiver issues, and clawback candidates.
+Assess each launch for:
+- Privacy/data protection risks (GDPR, CCPA, BIPA, HIPAA)
+- AI/algorithmic risks (EU AI Act, FTC guidance, state laws)
+- Consumer protection risks
+- Employment law risks
+- IP risks
+- Regulatory compliance risks
 
 OUTPUT FORMAT:
-## REPORT: Privilege Log Audit — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+## REPORT: Launch Radar — Legal Risk Assessment
 
-For each issue found:
-🔴 F-[NNN] | HIGH RISK | [Doc ID] — [Description]
-REFERENCE: [Doc ID, privilege basis, date, parties]
-ISSUE: [Inconsistency, waiver risk, or clawback concern]
-RECOMMENDED ACTION: [Re-designate, supplement description, assert clawback, etc.]
-
-## RISK SUMMARY
-Overall privilege log health and waiver exposure.
-
-## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Doc ID] | [Issue] | [Required action]
-
-PRIVILEGE LOG DATA:
-${data}`,
-    },
-    ocspend: {
-      name: 'Outside Counsel Spend Tracker',
-      icon: '💰',
-      color: '#6BAF8D',
-      desc: 'Monitors outside counsel invoices against budgets, flags rate overages, duplicate charges, and billing guideline violations.',
-      sampleData: SAMPLE_OC_SPEND,
-      sampleLabel: '12 invoices across 4 firms',
-      acceptTypes: '.csv,.xlsx,.txt',
-      prompt: (data) => `You are the Outside Counsel Spend Tracker managed agent. Analyze these invoices against budgets and billing guidelines.
-
-Check each invoice for: budget adherence, rate compliance, duplicate entries, block billing, excessive research time, staffing leverage, and billing guideline violations.
-
-OUTPUT FORMAT:
-## REPORT: Outside Counsel Spend Analysis — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-
-For each issue found:
-🔴 F-[NNN] | HIGH RISK | [Firm] — [Matter]
-REFERENCE: [Invoice #, period, amount, budget remaining]
-ISSUE: [Overage, rate violation, duplicate, guideline breach]
-RECOMMENDED ACTION: [Reduce invoice, request credit, adjust budget, escalate]
+For each launch item:
+🔴 F-[NNN] | HIGH RISK | [Launch ID] — [Product Name]
+REFERENCE: [Launch ID, target date, risk flags identified]
+ISSUE: [Specific legal risk with regulatory citations]
+CURRENT WORDING: "[Current product/feature description that creates risk]"
+RECOMMENDED WORDING: "[Specific mitigation — what needs to change before launch, required disclosures, consent mechanisms, etc.]"
 
 ## RISK SUMMARY
-Portfolio spend health, budget burn rate, and projected overages.
+Portfolio-level launch risk assessment. Which launches can proceed, which need holds, which need modifications.
 
 ## KEY ACTIONS
-KA-[N] | [HIGH/MEDIUM/LOW] | [Invoice/Firm] | [Issue] | [Required action with amount]
+KA-[N] | [HIGH/MEDIUM/LOW] | [Launch ID] | [Risk area] | [Required action before launch with specific recommendation]
 
-INVOICE DATA:
+LAUNCH DATA:
 ${data}`,
     },
   };
@@ -1019,45 +1032,13 @@ ${data}`,
     try {
       const text = await chatAPI({
         messages: [{ role: 'user', content: userPrompt }],
-        system: 'You are a managed legal agent. Follow the output format exactly. Every finding must use the structured F-NNN format with all 3 required lines (header, REFERENCE, ISSUE, RECOMMENDED ACTION). Be specific and actionable. End with: ---\nDraft for attorney review — not legal advice.',
+        system: 'You are a managed legal agent. Follow the output format exactly. Every finding must use the structured F-NNN format with all 5 required lines (header, REFERENCE, ISSUE, CURRENT WORDING, RECOMMENDED WORDING). Be specific and actionable. End with: ---\nDraft for attorney review — not legal advice.',
       });
       setAgentResults(prev => ({ ...prev, [agentId]: { text, time: new Date(), data: customData ? 'Custom upload' : 'Sample data' } }));
     } catch (err) {
       setAgentResults(prev => ({ ...prev, [agentId]: { text: `⚠ Agent error: ${err.message}`, time: new Date(), data: 'Error' } }));
     }
     setAgentRunning(null);
-  };
-
-  /* ─── MCP CONNECTOR TEST ─── */
-  const testMcpConnector = async (connectorName) => {
-    const conn = CONNECTORS.find(c => c.name === connectorName);
-    if (!conn) return;
-    setMcpTesting(connectorName);
-
-    try {
-      const text = await chatAPI({
-        messages: [{ role: 'user', content: `Simulate an MCP connector test for "${conn.name}".
-
-This connector has these tools: ${conn.tools.join(', ')}
-Test command: "${conn.testCmd}"
-MCP URL: ${conn.mcpUrl || 'Not yet available — requires API key configuration'}
-Auth method: ${conn.auth}
-
-Generate a realistic test report showing:
-1. CONNECTION STATUS: Whether the MCP handshake would succeed (show "✓ Connected" if mcpUrl exists, "⚡ Requires Configuration" if not)
-2. TOOL DISCOVERY: List each tool with a brief description of what it does
-3. SAMPLE TEST: Simulate running the test command "${conn.testCmd}" and show what the response would look like
-4. LEGAL USE CASES: 3 specific scenarios where this connector helps the legal team
-5. CONFIGURATION CHECKLIST: Step-by-step what needs to be done
-
-Format as a clean structured report. Be specific to ${conn.name}'s actual capabilities.` }],
-        system: `You are the Lexicon AI MCP diagnostics engine. Generate a realistic, technical MCP connector test report for legal technology platforms. Use specific tool names and realistic data. End with: --- MCP Test Complete — ${new Date().toISOString()}`
-      });
-      setMcpTestResults(prev => ({ ...prev, [connectorName]: { text, time: new Date(), status: conn.mcpLive ? 'live' : 'config_needed' } }));
-    } catch (err) {
-      setMcpTestResults(prev => ({ ...prev, [connectorName]: { text: `⚠ Test error: ${err.message}`, time: new Date(), status: 'error' } }));
-    }
-    setMcpTesting(null);
   };
 
   /* ─── FILTERED AREAS ─── */
@@ -1073,7 +1054,6 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
     { id: 'dashboard', label: 'Dashboard', icon: '◈' },
     { id: 'skills', label: 'Practice Areas', icon: '◆' },
     { id: 'agents', label: 'Agents', icon: '⟐' },
-    { id: 'mcp', label: 'MCP Connectors', icon: '🔗' },
     { id: 'agent', label: 'AI Agent', icon: '⬡' },
     { id: 'docs', label: 'Documents', icon: '▣' },
     { id: 'guide', label: 'User Guide', icon: '◎' },
@@ -1141,59 +1121,14 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                   { n: PRACTICE_AREAS.length, l: 'Practice Areas', icon: '📋', color: '#C9A84C' },
                   { n: totalSkills, l: 'AI Skills', icon: '⚡', color: '#5B9BD5' },
                   { n: MANAGED_AGENTS.length, l: 'Managed Agents', icon: '🤖', color: '#4ECDC4' },
-                  { n: `${CONNECTORS.length}`, l: 'MCP Connectors', icon: '🔗', color: '#B07CC6' },
+                  { n: `${CONNECTORS.length}+`, l: 'MCP Connectors', icon: '🔗', color: '#B07CC6' },
                   { n: SAMPLE_DOCS.length, l: 'Sample Docs', icon: '📄', color: '#6BAF8D' },
-                  { n: OWASP_CHECKS.reduce((a,c) => a + c.items.length, 0), l: 'Security Checks', icon: '🛡️', color: '#D4726A' },
+                  { n: VULN_REPORT.length, l: 'Security Checks', icon: '🛡️', color: '#D4726A' },
                 ].map((s, i) => (
                   <div key={i} className={`hero-stat animate-in stagger-${i + 1}`}>
                     <span className="hero-stat-icon" style={{ '--glow': s.color }}>{s.icon}</span>
                     <div className="hero-stat-num" style={{ color: s.color }}>{s.n}</div>
                     <div className="hero-stat-label">{s.l}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* ─── QUICK START ─── */}
-            <section className="section-block" style={{ marginTop: 0 }}>
-              <div className="section-header">
-                <h2 className="section-heading">🚀 Quick Start — Test the Platform in 4 Steps</h2>
-                <p className="section-sub">Get your first AI-generated legal analysis in under 2 minutes</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-                {[
-                  { step: '1', icon: '📋', title: 'Pick a Practice Area', desc: 'Go to Practice Areas → click any area (try Commercial Legal or Litigation)', action: 'Browse Skills →', onClick: () => setTab('skills') },
-                  { step: '2', icon: '⚡', title: 'Launch a Skill', desc: 'Click Launch on any skill — try "NDA Triager" or "Contract Review" to start', action: 'Open AI Agent →', onClick: () => setTab('agent') },
-                  { step: '3', icon: '📄', title: 'Use a Sample Doc', desc: 'Don\'t have a doc? Click Documents tab and load any sample — NDA, MSA, DPA, or Employment Offer', action: 'View Samples →', onClick: () => setTab('docs') },
-                  { step: '4', icon: '🤖', title: 'Run a Managed Agent', desc: 'Go to Agents tab → click "Run with Sample Data" on any agent for a live structured report', action: 'Try Agents →', onClick: () => setTab('agents') },
-                ].map((s, i) => (
-                  <div key={i}
-                    onClick={s.onClick}
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(201,168,76,0.15)',
-                      borderRadius: 14,
-                      padding: '20px 18px',
-                      cursor: 'pointer',
-                      transition: 'all 0.25s ease',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.4)'; e.currentTarget.style.background = 'rgba(201,168,76,0.06)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <span style={{
-                        width: 32, height: 32, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #C9A84C, #a08636)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, fontWeight: 800, color: '#0a0e1a',
-                      }}>{s.step}</span>
-                      <span style={{ fontSize: 20 }}>{s.icon}</span>
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', marginBottom: 6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>{s.title}</div>
-                    <div style={{ fontSize: 13, color: '#8896a8', lineHeight: 1.5, marginBottom: 12 }}>{s.desc}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>{s.action}</div>
                   </div>
                 ))}
               </div>
@@ -1233,12 +1168,12 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
               </div>
               <div className="features-grid">
                 {[
-                  { icon: '📝', title: 'Structured Findings', desc: 'Every finding numbered F-001 with section reference, issue description, and recommended action — ready for attorney review', color: '#C9A84C' },
+                  { icon: '📝', title: 'Structured Findings', desc: 'Every finding numbered F-001 with section reference, exact current wording, and recommended replacement language', color: '#C9A84C' },
                   { icon: '⚖', title: 'Compare & Comply', desc: 'Upload vendor doc + org standard — AI compares clause-by-clause and highlights every deviation', color: '#D4726A' },
                   { icon: '🤖', title: 'Managed Agents', desc: 'Autonomous agents scan contracts, regulatory feeds, and launches — deliver structured reports', color: '#4ECDC4' },
                   { icon: '📊', title: 'One-Click Export', desc: 'PDF with title page, Word for redlining, PowerPoint for leadership, Excel for tracking', color: '#5B9BD5' },
                   { icon: '🎯', title: 'Risk Report Cards', desc: 'Color-coded HIGH/MEDIUM/LOW with Key Actions table and executive risk summary', color: '#B07CC6' },
-                  { icon: '🔗', title: `${CONNECTORS.length} MCP Connectors`, desc: `${CONNECTORS.filter(c => c.mcpLive).length} live MCP services, ${CONNECTORS.filter(c => c.auto).length} auto-configured, ${CONNECTORS.filter(c => c.cat === 'Legal AI').length} legal-specific AI tools`, color: '#6BAF8D' },
+                  { icon: '🔗', title: `${CONNECTORS.length}+ Integrations`, desc: 'Ironclad, DocuSign, iManage, Everlaw, CourtListener, Slack, Jira, and more', color: '#6BAF8D' },
                 ].map((f, i) => (
                   <div key={i} className="feature-card" style={{ '--fcolor': f.color }}>
                     <div className="feature-icon-wrap">
@@ -1506,8 +1441,8 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                                 </div>
                                 {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
                                 {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
-                                {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
-                                {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
+                                {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
+                                {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
                                 {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
                               </div>
                             ))}
@@ -1534,171 +1469,6 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════════ MCP CONNECTORS ══════════════════ */}
-        {tab === 'mcp' && (
-          <div className="fade-wrapper visible">
-            <section className="hero-card" style={{ marginBottom: 24 }}>
-              <div className="hero-content">
-                <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>🔗 MCP Connectors</h2>
-                <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>
-                  {CONNECTORS.length} connectors across {[...new Set(CONNECTORS.map(c => c.cat))].length} categories.
-                  MCP (Model Context Protocol) lets the AI agent talk directly to your legal tools — research platforms, DMS, eDiscovery, email, and more.
-                  {' '}<strong style={{ color: 'var(--gold)' }}>{CONNECTORS.filter(c => c.mcpLive).length} connectors</strong> have live MCP services available for one-click connection.
-                </p>
-              </div>
-            </section>
-
-            {/* Filter Bar */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, padding: '0 4px' }}>
-              {['all', ...new Set(CONNECTORS.map(c => c.cat))].map(f => (
-                <button key={f} onClick={() => setMcpFilter(f)}
-                  style={{ padding: '6px 16px', borderRadius: 20, border: mcpFilter === f ? '2px solid var(--gold)' : '1px solid var(--border-light)',
-                    background: mcpFilter === f ? 'rgba(201,168,76,0.15)' : 'var(--surface)', color: mcpFilter === f ? 'var(--gold)' : 'var(--text-muted)',
-                    fontSize: 13, fontWeight: mcpFilter === f ? 700 : 500, cursor: 'pointer', fontFamily: 'var(--font-body)', textTransform: 'capitalize' }}>
-                  {f === 'all' ? `All (${CONNECTORS.length})` : `${f} (${CONNECTORS.filter(c => c.cat === f).length})`}
-                </button>
-              ))}
-            </div>
-
-            {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
-              {[
-                { label: 'Total', val: CONNECTORS.length, color: '#C9A84C', bg: 'rgba(201,168,76,0.1)' },
-                { label: 'Live MCP', val: CONNECTORS.filter(c => c.mcpLive).length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-                { label: 'Auto-Connect', val: CONNECTORS.filter(c => c.auto).length, color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
-                { label: 'Manual Setup', val: CONNECTORS.filter(c => !c.auto && !c.mcpLive).length, color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
-                { label: 'Legal AI', val: CONNECTORS.filter(c => c.cat === 'Legal AI').length, color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
-                { label: 'Tested ✓', val: CONNECTORS.filter(c => c.verified).length + Object.keys(mcpTestResults).filter(k => mcpTestResults[k].status !== 'error').length, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-              ].map((s, i) => (
-                <div key={i} style={{ textAlign: 'center', padding: '14px 8px', borderRadius: 12, background: s.bg, border: `1px solid ${s.color}22` }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: 'var(--font-display)' }}>{s.val}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Connector Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 16 }}>
-              {CONNECTORS.filter(c => mcpFilter === 'all' || c.cat === mcpFilter).map((conn, idx) => {
-                const isExpanded = mcpExpanded === conn.name;
-                const testResult = mcpTestResults[conn.name];
-                const isTesting = mcpTesting === conn.name;
-                const isConnected = connStates[conn.name] === 'connected';
-                const statusColor = conn.verified ? '#059669' : conn.mcpLive ? '#2563EB' : isConnected ? '#059669' : '#D97706';
-                const statusLabel = conn.verified ? '✓ Verified Live' : testResult ? (testResult.status === 'live' ? '✓ Tested' : testResult.status === 'error' ? '✗ Error' : '⚡ Configured') : conn.mcpLive ? '● MCP Available' : isConnected ? '● Auto-Connected' : '○ Manual Setup';
-
-                return (
-                  <div key={idx} style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden',
-                    boxShadow: isExpanded ? '0 8px 32px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.06)', transition: 'all 0.3s' }}>
-
-                    {/* Card Header */}
-                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-                      borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none',
-                      background: conn.mcpLive ? 'linear-gradient(135deg, rgba(5,150,105,0.04), rgba(37,99,235,0.04))' : undefined }}
-                      onClick={() => setMcpExpanded(isExpanded ? null : conn.name)}>
-                      <span style={{ fontSize: 28, filter: conn.mcpLive ? 'none' : 'grayscale(30%)' }}>{conn.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{conn.name}</span>
-                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: `${statusColor}18`, color: statusColor, fontWeight: 700, letterSpacing: 0.5 }}>{statusLabel}</span>
-                          {conn.mcpLive && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: 'rgba(124,58,237,0.1)', color: '#7C3AED', fontWeight: 700 }}>MCP</span>}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{conn.desc}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 8, background: 'var(--bg-darker)', color: 'var(--text-muted)', fontWeight: 600 }}>{conn.cat}</span>
-                        <span style={{ fontSize: 14, color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
-                      </div>
-                    </div>
-
-                    {/* Expanded Detail */}
-                    {isExpanded && (
-                      <div style={{ padding: '16px 20px' }}>
-                        {/* Tools */}
-                        <div style={{ marginBottom: 14 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Available Tools ({conn.tools.length})</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {conn.tools.map((tool, ti) => (
-                              <span key={ti} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: 'rgba(201,168,76,0.1)', color: 'var(--text-primary)',
-                                border: '1px solid rgba(201,168,76,0.2)', fontFamily: 'monospace' }}>{tool}</span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Connection Info */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-darker)' }}>
-                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>Auth Method</div>
-                            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, marginTop: 2 }}>{conn.auth}</div>
-                          </div>
-                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-darker)' }}>
-                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>MCP Endpoint</div>
-                            <div style={{ fontSize: 11, color: conn.mcpUrl ? '#059669' : 'var(--text-muted)', fontWeight: 600, marginTop: 2, wordBreak: 'break-all' }}>
-                              {conn.mcpUrl ? '✓ Available' : conn.mcpVia ? `Via ${conn.mcpVia}` : 'API Key Required'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Config Steps */}
-                        {conn.configSteps && (
-                          <div style={{ marginBottom: 14 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Configuration Steps</div>
-                            {conn.configSteps.map((step, si) => (
-                              <div key={si} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--gold)', minWidth: 20, textAlign: 'center',
-                                  background: 'rgba(201,168,76,0.15)', borderRadius: 6, padding: '2px 0', marginTop: 1 }}>{si + 1}</span>
-                                <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Legal Use */}
-                        {conn.legalUse && (
-                          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.12)', marginBottom: 14 }}>
-                            <div style={{ fontSize: 10, color: '#2563EB', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Legal Use Cases</div>
-                            <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{conn.legalUse}</div>
-                          </div>
-                        )}
-
-                        {/* Test Button & Results */}
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          <button className="btn btn-gold" disabled={mcpTesting !== null}
-                            onClick={() => testMcpConnector(conn.name)}
-                            style={{ fontSize: 13 }}>
-                            {isTesting ? '⏳ Testing…' : testResult ? '↻ Re-Test' : '▶ Test Connector'}
-                          </button>
-                          <button className="btn btn-ghost btn-sm"
-                            onClick={() => { setConnStates(prev => ({ ...prev, [conn.name]: prev[conn.name] === 'connected' ? 'disconnected' : 'connected' })); }}
-                            style={{ fontSize: 12 }}>
-                            {connStates[conn.name] === 'connected' ? '● Connected — Disconnect' : '○ Simulate Connect'}
-                          </button>
-                        </div>
-
-                        {/* Test Results */}
-                        {testResult && (
-                          <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 10, background: 'var(--bg-darker)',
-                            border: `1px solid ${testResult.status === 'error' ? '#DC262644' : '#05966944'}`, maxHeight: 400, overflowY: 'auto' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: testResult.status === 'error' ? '#DC2626' : '#059669' }}>
-                                {testResult.status === 'error' ? '✗ Test Failed' : '✓ Test Complete'}
-                              </span>
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{testResult.time?.toLocaleTimeString()}</span>
-                            </div>
-                            <div style={{ fontSize: 13, fontFamily: 'var(--font-body)', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                              {testResult.text}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
@@ -1779,7 +1549,7 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                       onDragOver={e => e.preventDefault()} onDrop={onDrop}>
                       <div style={{ fontSize: 24, marginBottom: 4 }}>📎</div>
                       <div className="upload-text">Drop file or click to upload</div>
-                      <div className="upload-hint">DOCX, TXT, CSV</div>
+                      <div className="upload-hint">PDF, DOCX, TXT, Images</div>
                     </div>
                     <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.zip,.eml"
@@ -1947,8 +1717,8 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                               </div>
                               {item.section && <div className="report-item-ref">📌 {item.section}{item.reference ? ` — ${item.reference}` : ''}</div>}
                               {item.issue && <div className="report-item-issue"><strong>Issue:</strong> {item.issue}</div>}
-                              {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
-                              {item.recommendedAction && <div className="report-item-action"><span className="wording-label">✅ Action:</span> <span className="wording-quote">{item.recommendedAction}</span></div>}
+                              {item.currentWording && <div className="report-item-current"><span className="wording-label">⛔ Current:</span> <span className="wording-quote">{item.currentWording}</span></div>}
+                              {item.recommendedWording && <div className="report-item-recommended"><span className="wording-label">✅ Recommended:</span> <span className="wording-quote">{item.recommendedWording}</span></div>}
                               {!item.issue && item.body && <div className="report-item-body">{item.body}</div>}
                             </div>
                           ))}
@@ -2175,26 +1945,18 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                   <p>MCP (Model Context Protocol) Connections are integrations that let the AI agent talk directly to the software your legal team already uses. Instead of copy-pasting between systems, the AI can read from and write to your existing tools securely.</p>
                   <p className="guide-what"><strong>Why it matters:</strong></p>
                   <p>Without MCP, you'd upload a contract manually, wait for analysis, then manually copy the results into your CLM. With MCP, the AI pulls the contract from Ironclad, analyzes it, and posts the review memo back — all in one workflow.</p>
-                  <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}):</strong></p>
+                  <p className="guide-what"><strong>Available Connections ({CONNECTORS.length}+):</strong></p>
                   <div className="guide-connectors-grid">
                     {CONNECTORS.map((c, i) => (
-                      <span key={i} className="guide-connector-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <span>{c.icon}</span> {c.name}
-                        {c.auto && <span style={{ fontSize: 9, background: 'rgba(78,205,196,0.2)', color: '#4ECDC4', padding: '1px 5px', borderRadius: 4, marginLeft: 4 }}>AUTO</span>}
-                      </span>
+                      <span key={i} className="guide-connector-chip">{c}</span>
                     ))}
                   </div>
                   <p className="guide-what"><strong>Categories:</strong></p>
                   <div className="guide-examples">
-                    {[...new Set(CONNECTORS.map(c => c.cat))].map((cat, ci) => (
-                      <div key={ci} className="guide-example">
-                        <span className="guide-ex-icon">{CONNECTORS.find(c => c.cat === cat)?.icon || '🔗'}</span>
-                        <div>
-                          <strong>{cat}</strong><br/>
-                          {CONNECTORS.filter(c => c.cat === cat).map(c => c.name).join(', ')}
-                        </div>
-                      </div>
-                    ))}
+                    <div className="guide-example"><span className="guide-ex-icon">📋</span><div><strong>Contract Lifecycle</strong><br/>Ironclad, DocuSign — pull contracts for review, push signed versions back</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📁</span><div><strong>Document Management</strong><br/>iManage, Box, Google Drive — search, retrieve, and file legal documents</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">⚖️</span><div><strong>Litigation & Research</strong><br/>Everlaw, CourtListener, Trellis — monitor dockets, search case law, manage evidence</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📌</span><div><strong>Project Management</strong><br/>Slack, Jira, Linear, Asana — route legal requests, track matters, coordinate teams</div></div>
                   </div>
                   <p className="guide-what"><strong>Security:</strong></p>
                   <p>All MCP connections use encrypted HTTPS channels with authentication. Data flows through secure APIs — the AI never stores credentials, and every action is logged for audit purposes. Your IT security team can review all connection configurations.</p>
@@ -2212,7 +1974,7 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
                   <p>The AI Agent is the core interface where you interact with Claude — Anthropic's most advanced AI model — to get legal work done. Upload a document, select a skill, and the AI produces a structured analysis with specific findings, wording recommendations, and action items.</p>
                   <p className="guide-what"><strong>What it produces:</strong></p>
                   <div className="guide-examples">
-                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Structured Report Cards</strong><br/>Color-coded findings (🔴 High / 🟡 Medium / 🟢 Low) with numbered finding IDs, section references, issue descriptions, and recommended actions</div></div>
+                    <div className="guide-example"><span className="guide-ex-icon">📊</span><div><strong>Structured Report Cards</strong><br/>Color-coded findings (🔴 High / 🟡 Medium / 🟢 Low) with numbered finding IDs, section references, current wording quotes, and recommended replacement language</div></div>
                     <div className="guide-example"><span className="guide-ex-icon">📥</span><div><strong>Downloadable Reports</strong><br/>Export as PDF (with title page + dashboard), Word (.doc), PowerPoint (.pptx), or Excel (.csv) — ready for stakeholder distribution</div></div>
                     <div className="guide-example"><span className="guide-ex-icon">📎</span><div><strong>Document Upload</strong><br/>Drag and drop Word documents (.docx), text files, CSVs, and more. The AI reads the full content and analyzes it immediately.</div></div>
                   </div>
@@ -2244,14 +2006,14 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
           <div className="fade-wrapper visible">
             <section className="hero-card" style={{ marginBottom: 24 }}>
               <div className="hero-content">
-                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>🛡️ OWASP Security Assessment</h2>
+                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Security & Vulnerability Audit</h2>
                 <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
-                  Security posture mapped against OWASP Top 10 for Web, LLM, and Agentic/MCP frameworks.
+                  Comprehensive scan of the Claude for Legal codebase — scripts, deployment manifests, MCP configurations, skill files, and agent orchestration patterns.
                 </p>
                 <div className="vuln-summary">
                   {[
-                    { label: 'Passed', count: OWASP_CHECKS.reduce((a, c) => a + c.items.filter(i => i.status === 'pass').length, 0), color: 'var(--green)' },
-                    { label: 'Advisory', count: OWASP_CHECKS.reduce((a, c) => a + c.items.filter(i => i.status === 'warn').length, 0), color: 'var(--orange)' },
+                    { label: 'Passed', count: VULN_REPORT.filter(v => v.status === 'pass').length, color: 'var(--green)' },
+                    { label: 'Warnings', count: VULN_REPORT.filter(v => v.status === 'warn').length, color: 'var(--orange)' },
                     { label: 'Critical', count: 0, color: 'var(--red)' },
                   ].map((s, i) => (
                     <div key={i} className="vuln-stat">
@@ -2263,31 +2025,27 @@ Format as a clean structured report. Be specific to ${conn.name}'s actual capabi
               </div>
             </section>
 
-            {OWASP_CHECKS.map((section, si) => (
-              <div key={si} style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, fontFamily: 'var(--font-heading)' }}>{section.cat}</h3>
-                <div className="vuln-list">
-                  {section.items.map((item, ii) => (
-                    <div key={ii} className={`vuln-item vuln-${item.status === 'pass' ? 'low' : 'medium'}`}>
-                      <div className="vuln-badges">
-                        <span className={`badge badge-${item.status}`}>{item.status === 'pass' ? '✓ PASS' : '⚠ ADVISORY'}</span>
-                        <span className="badge" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', fontSize: 10 }}>{item.code}</span>
-                      </div>
-                      <div className="vuln-title">{item.name}</div>
-                      <div className="vuln-desc">{item.fix}</div>
-                    </div>
-                  ))}
+            <div className="vuln-list">
+              {VULN_REPORT.map((v, i) => (
+                <div key={i} className={`vuln-item vuln-${v.severity}`}>
+                  <div className="vuln-badges">
+                    <span className={`badge badge-${v.status}`}>{v.status === 'pass' ? '✓ PASS' : '⚠ WARN'}</span>
+                    <span className={`badge badge-sev-${v.severity}`}>{v.severity}</span>
+                  </div>
+                  <div className="vuln-title">{v.title}</div>
+                  <div className="vuln-desc">{v.desc}</div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             <div className="assessment-box">
               <div className="assessment-title">Overall Assessment</div>
               <p className="assessment-text">
-                The platform demonstrates strong security across all three OWASP frameworks. Closed-schema intents prevent prompt injection,
-                workspace isolation enforces access boundaries, and all MCP connectors use scoped OAuth permissions. The four advisory items
-                represent defense-in-depth recommendations (rate limiting, append-only logs, TLS certificate pinning) rather than active vulnerabilities.
-                Overall: production-ready with recommended hardening.
+                The codebase demonstrates strong security practices: closed-schema intents prevent prompt injection escalation,
+                input validation hardens shell scripts, YAML parsing uses safe_load exclusively, no hardcoded secrets were detected,
+                and matter isolation maintains privilege boundaries. The three warnings are acknowledged by the authors and represent
+                defense-in-depth gaps rather than critical vulnerabilities. Overall: production-ready with recommended hardening for
+                audit log integrity and MCP TLS pinning.
               </p>
             </div>
           </div>

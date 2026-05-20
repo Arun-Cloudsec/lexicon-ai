@@ -1,71 +1,94 @@
-/* ─── Agent Sample Data — Lexicon AI ─── */
+export const SAMPLE_CONTRACT_REGISTER = `Contract ID,Vendor,Contract Type,Start Date,End Date,Auto-Renew,Cancel Notice Days,Annual Value,Status,Owner,Department
+CTR-2024-001,Acme Cloud Services,SaaS MSA,2024-01-15,2026-06-30,Yes,90,$485000,Active,Sarah Chen,Engineering
+CTR-2024-002,Baker & Sterling LLP,Outside Counsel,2024-03-01,2025-12-31,No,60,$1200000,Active,James Park,Legal
+CTR-2023-015,Cloudflare Inc,Infrastructure,2023-06-01,2026-06-15,Yes,60,$125000,Active,Mike Torres,IT
+CTR-2024-008,DataVault Analytics,Data Processing,2024-02-01,2026-07-31,Yes,30,$340000,Active,Lisa Wang,Analytics
+CTR-2023-022,Deloitte Advisory,Consulting,2023-09-15,2026-09-14,No,90,$2100000,Active,James Park,Finance
+CTR-2024-011,Everlaw Inc,eDiscovery Platform,2024-04-01,2026-08-01,Yes,45,$89000,Active,Rachel Kim,Legal
+CTR-2023-030,FinServe Compliance,RegTech Platform,2023-11-01,2026-06-20,Yes,60,$210000,Active,Tom Brooks,Compliance
+CTR-2024-015,GreenField Staffing,Temp Staff Agreement,2024-01-01,2026-12-31,Yes,30,$560000,Active,HR Ops,Human Resources
+CTR-2023-045,HireRight Inc,Background Checks,2023-08-15,2026-08-14,Yes,90,$45000,Active,HR Ops,Human Resources
+CTR-2024-020,IBM Watson Legal,AI Legal Tools,2024-05-01,2026-06-25,Yes,60,$175000,Active,Sarah Chen,Legal Ops
+CTR-2024-025,Ironclad Inc,CLM Platform,2024-06-01,2027-05-31,Yes,90,$320000,Active,Sarah Chen,Legal Ops
+CTR-2023-050,KPMG,Annual Audit,2023-01-01,2026-12-31,No,120,$890000,Active,CFO Office,Finance
+CTR-2024-030,Lexis Advance,Legal Research,2024-07-01,2026-07-01,Yes,60,$67000,Active,Library,Legal
+CTR-2024-033,Marsh McLennan,D&O Insurance,2024-01-01,2026-06-30,No,60,$450000,Active,Risk Mgmt,Finance
+CTR-2023-060,NetSuite (Oracle),ERP System,2023-04-01,2026-03-31,Yes,90,$1500000,Expired,IT Ops,IT
+CTR-2024-040,Okta Inc,Identity Platform,2024-08-01,2026-08-01,Yes,30,$95000,Active,IT Security,IT
+CTR-2024-045,PwC,Tax Advisory,2024-09-01,2026-08-31,No,60,$780000,Active,Tax Team,Finance
+CTR-2023-070,Salesforce,CRM Enterprise,2023-05-01,2026-07-15,Yes,90,$2200000,Active,Rev Ops,Sales
+CTR-2024-050,ServiceNow,ITSM Platform,2024-10-01,2027-09-30,Yes,60,$410000,Active,IT Ops,IT
+CTR-2024-055,Workday Inc,HCM Platform,2024-11-01,2027-10-31,Yes,90,$890000,Active,HR Ops,Human Resources`;
 
-export const SAMPLE_CONTRACT_REGISTER = `CONTRACT_ID,VENDOR,TYPE,VALUE_USD,START_DATE,END_DATE,AUTO_RENEW,CANCEL_NOTICE_DAYS,STATUS,OWNER
-CTR-001,Westlaw,Research Subscription,145000,2023-06-01,2025-07-15,Yes,90,Active,Legal Ops
-CTR-002,DocuSign,SaaS Platform,89000,2024-01-15,2025-06-30,Yes,60,Active,IT/Legal
-CTR-003,Relativity,eDiscovery Platform,210000,2023-03-01,2025-06-20,No,30,Active,Litigation
-CTR-004,Ironclad,CLM Platform,175000,2024-06-01,2026-05-31,Yes,90,Active,Legal Ops
-CTR-005,Baker McKenzie,Outside Counsel,500000,2024-01-01,2025-12-31,No,60,Active,GC Office
-CTR-006,Dentons,IP Prosecution,320000,2023-09-01,2025-08-31,Yes,90,Active,IP Team
-CTR-007,iManage,DMS,95000,2024-03-15,2026-03-14,Yes,60,Active,IT
-CTR-008,Axiom,Managed Legal Services,280000,2023-12-01,2025-06-15,No,45,Active,Legal Ops
-CTR-009,Kira Systems,AI Review,125000,2024-07-01,2025-06-30,Yes,30,Active,M&A
-CTR-010,CourtListener,Court Data,18000,2024-01-01,2025-12-31,Yes,30,Active,Litigation
-CTR-011,Everlaw,eDiscovery,165000,2024-04-01,2026-03-31,Yes,60,Active,Litigation
-CTR-012,BRYTER,No-Code Legal,55000,2024-08-01,2025-07-31,Yes,30,Active,Innovation
-CTR-013,Luminance,AI Diligence,198000,2023-11-01,2025-10-31,Yes,90,Active,Corporate
-CTR-014,Definely,Doc Comparison,32000,2024-06-15,2025-06-14,Yes,30,Active,Legal Ops
-CTR-015,Thomson Reuters Practical Law,Know-How,78000,2024-01-01,2025-12-31,Yes,60,Active,Knowledge
-CTR-016,Compliance.ai,Reg Intelligence,42000,2024-09-01,2025-08-31,Yes,30,Active,Regulatory
-CTR-017,AWS (Legal Infra),Cloud Hosting,156000,2024-01-01,2025-12-31,No,90,Active,IT
-CTR-018,NetDocuments,Cloud DMS,88000,2023-07-01,2025-06-30,Yes,60,Active,IT
-CTR-019,ContractPodAI,CLM,135000,2024-02-01,2026-01-31,Yes,60,Active,Legal Ops
-CTR-020,Litera,Drafting Suite,47000,2024-04-15,2025-04-14,Yes,30,Active,Legal Ops`;
+export const SAMPLE_REG_UPDATES = `REGULATORY MONITOR — WEEKLY DIGEST SOURCE DATA
+Week of May 12-16, 2026
 
-export const SAMPLE_REG_UPDATES = `REG_ID,AGENCY,TITLE,EFFECTIVE_DATE,COMMENT_DEADLINE,IMPACT_AREA,SUMMARY
-REG-2025-001,SEC,Cybersecurity Incident Disclosure Amendment,2025-09-01,,Securities/Cyber,"Expands Form 8-K cybersecurity incident reporting to include AI system failures that materially impact operations"
-REG-2025-002,FTC,AI Transparency in Legal Services,2025-11-15,2025-07-30,Consumer Protection/AI,"Proposed rule requiring disclosure when AI systems are used in legal service delivery affecting consumer rights"
-REG-2025-003,DOJ,Corporate Compliance Program AI Guidance,2025-07-01,,Criminal/Compliance,"Updated guidance on evaluating corporate compliance programs that use AI — requires human oversight documentation"
-REG-2025-004,EU Commission,AI Act Implementing Regulation — Legal Sector,2025-10-01,,AI/Privacy,"Implementing rules for high-risk AI systems in legal decision-making under EU AI Act Article 6"
-REG-2025-005,CA Attorney General,CA AI Accountability Act Regulations,2025-08-15,2025-06-15,State/AI,"Implementing regulations for SB-1047 successor requiring impact assessments for AI in legal practice"
-REG-2025-006,NY DFS,Cybersecurity Regulation Amendment (500.1),2025-12-01,,Cyber/Financial,"Extends cybersecurity requirements to legal service providers handling financial institution data"
-REG-2025-007,HHS,HIPAA AI Addendum,2025-09-30,2025-08-01,Healthcare/AI,"Proposed rule extending HIPAA requirements to AI systems processing protected health information in legal contexts"`;
+FEDERAL REGISTER NOTICES:
 
-export const SAMPLE_LIT_HOLDS = `HOLD_ID,MATTER,ISSUE_DATE,CUSTODIAN_COUNT,ACKNOWLEDGED,DATA_SOURCES,LAST_REMINDER,STATUS
-LH-001,Acme v. GlobalTech (Patent),2024-03-15,12,10,"Email;Slack;Drive;Code Repos",2025-04-01,Active
-LH-002,DOJ Investigation - Antitrust,2024-06-22,25,25,"Email;Teams;SharePoint;SAP;Salesforce",2025-05-10,Active
-LH-003,Employment Class Action - CA,2024-09-01,8,6,"Email;HRIS;Slack;Payroll",2025-03-15,Active
-LH-004,SEC Inquiry - Disclosure,2024-11-10,15,12,"Email;Drive;Slack;Finance Systems;Board Portal",2025-05-01,Active
-LH-005,Product Liability - Widget X,2025-01-05,6,6,"Email;Jira;Confluence;QA Systems",2025-04-20,Active
-LH-006,Trade Secret - Former Employee,2025-02-18,4,2,"Email;Drive;GitHub;Laptop Images",2025-03-01,Active`;
+1. [SEC] Final Rule: Enhanced Cybersecurity Risk Management for Investment Advisers
+   Published: May 14, 2026 | Effective: November 14, 2026
+   Summary: Requires registered investment advisers to adopt and implement written cybersecurity risk management policies, report significant cybersecurity incidents to the SEC within 48 hours, and publicly disclose cybersecurity risks and incidents. Applies to advisers with $1B+ AUM.
+   Citation: 17 CFR Parts 275 and 279, Release No. IA-6732
 
-export const SAMPLE_PRIV_LOG = `DOC_ID,DATE,FROM,TO,CC,PRIVILEGE_BASIS,DESCRIPTION,PRODUCED
-PRIV-001,2024-06-15,john.doe@company.com,outside.counsel@firm.com,,Attorney-Client,"Communication seeking legal advice regarding patent portfolio strategy",No
-PRIV-002,2024-06-18,outside.counsel@firm.com,john.doe@company.com,gc@company.com,Attorney-Client,"Legal advice regarding patent infringement risk assessment",No
-PRIV-003,2024-07-01,jane.smith@company.com,john.doe@company.com,,Work Product,"Draft litigation strategy memorandum prepared in anticipation of litigation",No
-PRIV-004,2024-07-05,john.doe@company.com,cfo@company.com,,Attorney-Client,"Legal advice on SEC disclosure obligations — forwarded from outside counsel",No
-PRIV-005,2024-07-10,hr.director@company.com,john.doe@company.com,,"Business Purpose Only","Meeting notes from HR planning session — no legal advice sought or given",No
-PRIV-006,2024-07-15,gc@company.com,board@company.com,,Attorney-Client,"Privileged board briefing on pending litigation matters",No
-PRIV-007,2024-07-20,paralegal@company.com,outside.counsel@firm.com,,Work Product,"Document compilation prepared at direction of counsel for litigation",No
-PRIV-008,2024-08-01,john.doe@company.com,marketing@company.com,,,"Marketing copy review — compliance suggestions (no privilege claimed)",Yes
-PRIV-009,2024-08-05,outside.counsel@firm.com,john.doe@company.com;ceo@company.com;investor@external.com,,"Attorney-Client?","Legal analysis shared with non-company third party — potential waiver",No
-PRIV-010,2024-08-10,gc@company.com,outside.counsel@firm.com,,Attorney-Client + Work Product,"Dual-purpose communication — legal advice on investigation strategy",No
-PRIV-011,2024-08-15,john.doe@company.com,engineering@company.com,,,"Technical discussion about system architecture — mentions pending lawsuit in passing",No
-PRIV-012,2024-08-20,gc@company.com,all-hands@company.com,,,"Company-wide announcement about policy changes — references legal department review",Yes
-PRIV-013,2024-09-01,outside.counsel@firm.com,john.doe@company.com,,Work Product,"Expert witness evaluation memorandum",No
-PRIV-014,2024-09-05,john.doe@company.com,gc@company.com,,Attorney-Client,"Summary of settlement negotiation positions and legal risk assessment",No
-PRIV-015,2024-09-10,consultant@thirdparty.com,john.doe@company.com,outside.counsel@firm.com,Attorney-Client (via Kovel),"Forensic accounting analysis prepared under Kovel doctrine at counsel direction",No`;
+2. [FTC] Notice of Proposed Rulemaking: AI-Generated Content in Advertising
+   Published: May 13, 2026 | Comment Period Closes: July 14, 2026
+   Summary: Proposes requiring clear and conspicuous disclosure when advertising content is substantially generated by AI, including text, images, and video. Covers endorsements, testimonials, and product demonstrations. Violations subject to civil penalties up to $50,120 per violation.
+   Citation: 16 CFR Part 255, FTC-2026-0034
 
-export const SAMPLE_OC_SPEND = `INVOICE_ID,FIRM,MATTER,PERIOD,AMOUNT,BUDGET_TOTAL,BUDGET_SPENT,HOURS,AVG_RATE,PARTNER_HOURS,ASSOCIATE_HOURS,PARALEGAL_HOURS,GUIDELINE_FLAGS
-INV-2025-101,Baker McKenzie,Acme Patent Litigation,2025-04,85000,500000,340000,142,598,35,85,22,None
-INV-2025-102,Baker McKenzie,Acme Patent Litigation,2025-05,92000,500000,432000,148,622,42,80,26,"Rate increase — partner rate $50 over agreed cap"
-INV-2025-103,Dentons,IP Portfolio Prosecution,2025-04,45000,320000,180000,95,474,15,60,20,None
-INV-2025-104,Dentons,IP Portfolio Prosecution,2025-05,38000,320000,218000,78,487,12,50,16,None
-INV-2025-105,Latham & Watkins,DOJ Antitrust Investigation,2025-04,175000,800000,520000,210,833,80,100,30,"Block billing on 3 entries; excessive research (18hrs)"
-INV-2025-106,Latham & Watkins,DOJ Antitrust Investigation,2025-05,165000,800000,685000,195,846,75,95,25,"Potential duplicate: Doc review charge matches INV-2025-105 line 14"
-INV-2025-107,Wilson Sonsini,Series C Financing,2025-04,55000,150000,110000,88,625,20,55,13,None
-INV-2025-108,Wilson Sonsini,Series C Financing,2025-05,62000,150000,172000,95,653,25,58,12,"Over budget — $22K (14.7%) above total budget"
-INV-2025-109,Littler Mendelson,Employment Class Action,2025-04,72000,400000,195000,128,563,30,75,23,None
-INV-2025-110,Littler Mendelson,Employment Class Action,2025-05,68000,400000,263000,120,567,28,70,22,None
-INV-2025-111,Baker McKenzie,Regulatory Compliance,2025-05,42000,200000,125000,70,600,18,40,12,None
-INV-2025-112,DLA Piper,EU AI Act Compliance,2025-05,88000,250000,88000,105,838,40,50,15,"New matter — first invoice. Staffing leverage review recommended"`;
+3. [HHS/OCR] Interim Final Rule: HIPAA Security Rule Update
+   Published: May 12, 2026 | Effective: July 12, 2026
+   Summary: Strengthens HIPAA Security Rule requirements including mandatory MFA for ePHI access, 72-hour breach notification to individuals (reduced from 60 days), annual penetration testing, and encrypted backup requirements. Applies to covered entities and business associates.
+   Citation: 45 CFR Parts 160 and 164, RIN 0945-AA22
+
+4. [DOJ] Guidance: Corporate Compliance Programs — AI Supplement
+   Published: May 15, 2026
+   Summary: Updates the DOJ Evaluation of Corporate Compliance Programs to include AI-specific factors: whether company maintains an AI use inventory, conducts algorithmic impact assessments, has AI governance policies, monitors AI outputs for bias, and trains employees on responsible AI use. Signals prosecutorial focus on AI governance.
+   Citation: Criminal Division Guidance Document, May 2026
+
+5. [EU] AI Act Implementing Regulation: High-Risk AI System Registration
+   Published: May 11, 2026 | EU Member State Deadline: August 2, 2026
+   Summary: Establishes mandatory registration requirements for high-risk AI systems in the EU database. Organizations deploying high-risk AI must register systems with national authorities, maintain technical documentation per Annex IV, and conduct conformity assessments before deployment.
+   Citation: Commission Implementing Regulation (EU) 2026/892
+
+STATE REGULATORY ACTIONS:
+
+6. [California] CPRA Enforcement Action: TechCorp Data Broker
+   Published: May 13, 2026
+   Summary: California Privacy Protection Agency issues $12.5M penalty against TechCorp for failure to honor opt-out requests, inadequate data inventory, and selling personal information of minors without affirmative consent. First enforcement action exceeding $10M under CPRA.
+
+7. [New York] DFS Cybersecurity Regulation Amendment (23 NYCRR 500)
+   Published: May 14, 2026 | Effective: September 1, 2026
+   Summary: Amends 23 NYCRR 500 to require Class A companies to implement AI-specific security controls, conduct AI model risk assessments, and maintain an AI incident response plan. Expands CISO reporting requirements to include AI-related risks.`;
+
+export const SAMPLE_LAUNCH_ITEMS = `PRODUCT LAUNCH TRACKER — ITEMS PENDING LEGAL REVIEW
+Export Date: May 16, 2026
+
+LAUNCH-001 | Priority: P0 | Target: June 1, 2026
+Product: AI Copilot for Customer Support
+Description: AI chatbot that handles Tier 1 support tickets automatically, with escalation to human agents. Uses customer data including support history, account info, and purchase records. Deployed across US, UK, and EU regions.
+Legal Review Status: NOT STARTED
+Risk Flags: AI/ML, Customer PII, Cross-border data, Automated decision-making
+
+LAUNCH-002 | Priority: P1 | Target: June 15, 2026
+Product: Predictive Analytics Dashboard
+Description: Internal dashboard for sales team that predicts customer churn probability and recommends retention offers. Uses behavioral data, purchase history, and demographic information. ML model trained on 3 years of customer data.
+Legal Review Status: NOT STARTED
+Risk Flags: Profiling, Automated decisions with legal effects, Data retention
+
+LAUNCH-003 | Priority: P1 | Target: July 1, 2026
+Product: Biometric Authentication for Mobile App
+Description: Face ID and fingerprint authentication option for the mobile banking app. Biometric templates stored locally on device, not server-side. Covers Illinois, Texas, and Washington state users.
+Legal Review Status: IN PROGRESS
+Risk Flags: BIPA compliance, Biometric data, State-specific laws
+
+LAUNCH-004 | Priority: P2 | Target: July 15, 2026
+Product: Employee Wellness Program Integration
+Description: Integration with third-party wellness platform (FitTrack) that collects employee health metrics, sleep data, and activity levels. Voluntary program with incentive rewards. Data shared with insurance carrier for group rate calculations.
+Legal Review Status: NOT STARTED
+Risk Flags: HIPAA, Employee health data, Third-party sharing, Incentive program compliance
+
+LAUNCH-005 | Priority: P0 | Target: June 10, 2026
+Product: Dynamic Pricing Engine v2
+Description: Updated pricing algorithm that adjusts product prices in real-time based on demand, competitor pricing, customer segment, and purchase history. Deployed in all US markets.
+Legal Review Status: NOT STARTED
+Risk Flags: Price discrimination, Algorithmic fairness, FTC scrutiny, State consumer protection`;

@@ -78,6 +78,13 @@ app.post('/api/chat', apiLimiter, async (req, res) => {
       if (typeof msg.content === 'string' && msg.content.length > 80000) {
         return res.status(400).json({ error: 'Message content exceeds 80,000 character limit.' });
       }
+      // Allow array content (multimodal: text + images) — validate total text length
+      if (Array.isArray(msg.content)) {
+        const totalText = msg.content.filter(b => b.type === 'text').reduce((sum, b) => sum + (b.text?.length || 0), 0);
+        if (totalText > 80000) {
+          return res.status(400).json({ error: 'Message text content exceeds 80,000 character limit.' });
+        }
+      }
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
