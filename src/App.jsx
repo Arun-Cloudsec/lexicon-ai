@@ -601,6 +601,7 @@ export default function App() {
   const [vendorDoc, setVendorDoc] = useState(null);
   const [orgDoc, setOrgDoc] = useState(null);
   const [agentMode, setAgentMode] = useState('review');
+  const [outputLang, setOutputLang] = useState('English');
   const [skillTypeFilter, setSkillTypeFilter] = useState(null);
   const [lastDocContent, setLastDocContent] = useState('');
   const [chatHistory, setChatHistory] = useState(() => {
@@ -771,6 +772,7 @@ QUALITY RULES:
 ${skillType === 'review' ? '- Quote EXACT language from the document in CURRENT WORDING fields\n- RECOMMENDED WORDING must be specific enough to copy-paste into a redline' : ''}
 
 ${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc + '. Skill type: ' + skillType + '. Apply this methodology.' : ''}
+${outputLang !== 'English' ? 'LANGUAGE INSTRUCTION: Produce ALL output (findings, recommendations, summaries, headings, risk labels) in ' + outputLang + '. Keep legal terms of art in their original form where no standard translation exists, but write all analysis, explanations, and recommended wording in ' + outputLang + '.' : ''}
 ${files.length > 0 ? 'Documents provided inline. Analyze fully.' : ''}`;
 
     try {
@@ -1033,7 +1035,8 @@ KA-[N] | [HIGH/MEDIUM/LOW] | [Section ref] | [Non-compliance issue] | [Specific 
 End with: ---
 Draft for attorney review — not legal advice.
 
-${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc : ''}`;
+${skill ? 'ACTIVE SKILL: "' + skill.name + '" — ' + skill.desc : ''}
+${outputLang !== 'English' ? 'LANGUAGE INSTRUCTION: Produce ALL output in ' + outputLang + '. Keep legal terms of art in their original form where needed, but write all analysis, findings, and recommended wording in ' + outputLang + '.' : ''}`;
 
     const prompt = `VENDOR/CUSTOMER DOCUMENT: "${vendorDoc.name}"
 --- DOCUMENT START ---
@@ -1787,6 +1790,37 @@ ${data}`,
                   <button className={`mode-tab ${agentMode === 'compare' ? 'mode-active' : ''}`} onClick={() => setAgentMode('compare')}>
                     ⚖ Compare & Comply
                   </button>
+                </div>
+
+                {/* ─── LANGUAGE SELECTOR ─── */}
+                <div style={{ marginTop: 12, marginBottom: 12 }}>
+                  <div className="sidebar-title" style={{ fontSize: 10, marginBottom: 6 }}>🌐 OUTPUT LANGUAGE</div>
+                  <select
+                    value={outputLang}
+                    onChange={e => setOutputLang(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 8,
+                      background: 'var(--bg-card)', border: '1px solid var(--border)',
+                      color: 'var(--text-primary)', fontSize: 12, fontFamily: 'var(--font-body)',
+                      cursor: 'pointer', appearance: 'auto'
+                    }}
+                  >
+                    {[
+                      'English', '中文 (Chinese - Simplified)', '繁體中文 (Chinese - Traditional)',
+                      '廣東話 (Cantonese)', 'Español (Spanish)', 'Deutsch (German)',
+                      'Français (French)', '日本語 (Japanese)', '한국어 (Korean)',
+                      'Português (Portuguese)', 'العربية (Arabic)', 'हिन्दी (Hindi)',
+                      'Bahasa Indonesia', 'Tiếng Việt (Vietnamese)', 'ภาษาไทย (Thai)',
+                      'Italiano (Italian)', 'Nederlands (Dutch)', 'Русский (Russian)',
+                    ].map(lang => (
+                      <option key={lang} value={lang}>{lang}</option>
+                    ))}
+                  </select>
+                  {outputLang !== 'English' && (
+                    <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      ✓ All findings, analysis, and recommendations will be in <strong style={{ color: 'var(--text-primary)' }}>{outputLang.split(' (')[0]}</strong>. Legal terms of art preserved in original form.
+                    </div>
+                  )}
                 </div>
 
                 {/* MODE 1: SKILL-BASED REVIEW */}
