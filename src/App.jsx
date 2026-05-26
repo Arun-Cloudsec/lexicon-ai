@@ -1201,7 +1201,7 @@ ${data}`,
     { id: 'skills', label: 'Practice Areas', icon: '◆' },
     { id: 'agents', label: 'Agents', icon: '⟐' },
     { id: 'agent', label: 'AI Agent', icon: '⬡' },
-    { id: 'docs', label: 'Documents', icon: '▣' },
+
     { id: 'guide', label: 'User Guide', icon: '◎' },
     { id: 'security', label: 'Security', icon: '◉' },
   ];
@@ -1277,6 +1277,54 @@ ${data}`,
                     <div className="hero-stat-label">{s.l}</div>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* ─── QUICK START ─── */}
+            <section className="section-block">
+              <div className="section-header">
+                <h2 className="section-heading">🚀 Quick Start — Get Started in 3 Steps</h2>
+                <p className="section-sub">New here? Follow these steps to see Lexicon AI in action using pre-loaded sample documents</p>
+              </div>
+              <div className="features-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                {[
+                  {
+                    icon: '①',
+                    title: 'Try a Skill Review',
+                    desc: 'Go to AI Agent → Select "Skill Review" mode → Sample documents are pre-loaded. Click any sample to auto-load the document with the matching legal skill and run an instant analysis.',
+                    color: '#C9A84C',
+                    action: () => { setTab('agent'); setAgentMode('review'); }
+                  },
+                  {
+                    icon: '②',
+                    title: 'Try Compare & Comply',
+                    desc: 'Go to AI Agent → Select "Compare & Comply" mode → Click any sample pair (e.g. NDA, MSA, DPA) to load both the vendor document AND the org standard. Hit "Compare Documents" to see clause-by-clause deviation analysis.',
+                    color: '#D4726A',
+                    action: () => { setTab('agent'); setAgentMode('compare'); }
+                  },
+                  {
+                    icon: '③',
+                    title: 'Run a Managed Agent',
+                    desc: 'Go to the Agents tab → Pick any agent (Contract Deadlines, Regulatory Monitor, Launch Readiness) → Click "Run with Sample Data" to see how autonomous agents scan and deliver structured reports.',
+                    color: '#4ECDC4',
+                    action: () => setTab('agents')
+                  },
+                ].map((step, i) => (
+                  <div key={i} className="feature-card" style={{ '--fcolor': step.color, cursor: 'pointer' }} onClick={step.action}>
+                    <div className="feature-icon-wrap">
+                      <span className="feature-icon" style={{ fontSize: 28 }}>{step.icon}</span>
+                    </div>
+                    <div className="feature-title">{step.title}</div>
+                    <div className="feature-desc">{step.desc}</div>
+                    <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: step.color, letterSpacing: '0.5px' }}>
+                      Launch →
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, padding: '14px 20px', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 10, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7, fontFamily: 'var(--font-body)' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>💡 Tip:</strong> All sample documents and org standards are pre-loaded — no uploads needed to test.
+                For <strong style={{ color: '#D4726A' }}>Compare &amp; Comply</strong>, we've included {COMPARE_PAIRS.length} sample pairs (NDA, MSA, DPA, Employment, Software License), each with a vendor document <em>and</em> your org's standard template so you can see the full clause-by-clause comparison immediately.
               </div>
             </section>
 
@@ -1682,7 +1730,7 @@ ${data}`,
               <p className="auth-desc">
                 The AI Agent provides live legal analysis powered by Claude. 
                 Enter your access code to continue. You can explore all other sections 
-                of the platform — Dashboard, Practice Areas, Documents, User Guide, and 
+                of the platform — Dashboard, Practice Areas, User Guide, and 
                 Security Audit — without a code.
               </p>
               <div className="auth-input-row">
@@ -2042,69 +2090,7 @@ ${data}`,
         )}
 
         {/* ══════════════════ DOCUMENTS ══════════════════ */}
-        {tab === 'docs' && (
-          <div className="fade-wrapper visible">
-            <section className="hero-card" style={{ marginBottom: 24 }}>
-              <div className="hero-content">
-                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Sample Legal Documents</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
-                  Download these templates to test the platform. Upload them into the AI Agent for review, triage, and analysis.
-                </p>
-              </div>
-            </section>
 
-            <div className="doc-layout">
-              <div className="doc-sidebar">
-                <div className="sidebar-title">AVAILABLE SAMPLES</div>
-                {SAMPLE_DOCS.map((doc, i) => (
-                  <div key={i} className={`doc-item ${docIdx === i ? 'active' : ''}`} onClick={() => setDocIdx(i)}>
-                    <div className="doc-item-name">{doc.name}</div>
-                    <span className={`badge badge-${doc.type}`}>{doc.type}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="doc-main">
-                <div className="doc-header">
-                  <div className="doc-title">{SAMPLE_DOCS[docIdx].name}</div>
-                  <div className="doc-actions">
-                    <button className="btn btn-gold" onClick={() => {
-                      const d = SAMPLE_DOCS[docIdx];
-                      downloadBlob(new Blob([d.content], { type: 'text/plain' }), d.filename);
-                    }}>⬇ Download</button>
-                  </div>
-                </div>
-                {SAMPLE_DOCS[docIdx].skillName && (
-                  <div className="doc-skill-bar">
-                    <span className="doc-skill-label">Linked Skill:</span>
-                    <span className="doc-skill-name">{SAMPLE_DOCS[docIdx].skillName}</span>
-                    <div className="doc-test-buttons">
-                      <button className="btn btn-gold btn-sm" onClick={() => launchDocTest(SAMPLE_DOCS[docIdx], 'review')}>
-                        📄 Test — Skill Review
-                      </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => launchDocTest(SAMPLE_DOCS[docIdx], 'compare')}>
-                        ⚖ Test — Compare & Comply
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {!SAMPLE_DOCS[docIdx].skillName && (
-                  <div className="doc-skill-bar">
-                    <div className="doc-test-buttons">
-                      <button className="btn btn-gold btn-sm" onClick={() => {
-                        setTab('agent');
-                        setFiles([{ name: SAMPLE_DOCS[docIdx].filename, ext: 'TXT', content: SAMPLE_DOCS[docIdx].content, reading: false, size: '—' }]);
-                        setInput(`Analyze this "${SAMPLE_DOCS[docIdx].name}" document.`);
-                      }}>
-                        🤖 Analyze with AI
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <pre className="doc-preview">{SAMPLE_DOCS[docIdx].content}</pre>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ══════════════════ USER GUIDE ══════════════════ */}
         {tab === 'guide' && (
@@ -2234,7 +2220,7 @@ ${data}`,
                     <div className="guide-example"><span className="guide-ex-icon">📎</span><div><strong>Document Upload</strong><br/>Drag and drop Word documents (.docx), text files, CSVs, and more. The AI reads the full content and analyzes it immediately.</div></div>
                   </div>
                   <p className="guide-what"><strong>Access:</strong></p>
-                  <p>The AI Agent requires an access code to use. Contact your legal operations team for the code. All other sections (Dashboard, Practice Areas, Documents, User Guide, Security) are freely accessible for browsing.</p>
+                  <p>The AI Agent requires an access code to use. Contact your legal operations team for the code. All other sections (Dashboard, Practice Areas, User Guide, Security) are freely accessible for browsing.</p>
                 </div>
               </div>
 
